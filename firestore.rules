@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    function isExistingOwner() {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /{collection}/{document} {
+      allow read: if isExistingOwner();
+      allow create: if isOwner();
+      allow update, delete: if isExistingOwner();
+    }
+  }
+}

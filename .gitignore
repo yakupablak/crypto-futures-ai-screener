@@ -1,0 +1,31 @@
+node_modules/
+.next/
+dist/
+coverage/
+.firebase/
+.turbo/
+.vercel/
+
+.env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/functions/.env.local
+*.local
+
+*.log
+firebase-debug.log
+.tmp-*.log
+
+*.tsbuildinfo
+
+# Firebase / service account secrets
+firebase-adminsdk-*.json
+*-firebase-adminsdk-*.json
+*adminsdk*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

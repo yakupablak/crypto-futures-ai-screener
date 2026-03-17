@@ -1,0 +1,383 @@
+import type {
+  IndicatorDefinition,
+  IndicatorProposal,
+  ScanRun,
+  SignalCandidate,
+  SignalSnapshot,
+  TradeJournalEntry,
+  TradeReviewReport,
+  UserSettings,
+} from "./schemas";
+
+const now = new Date("2026-03-17T18:15:00.000Z").toISOString();
+const ownerId = "demo-owner";
+
+export const mockSettings: UserSettings = {
+  ownerId,
+  preferredRiskPerTradePct: 1,
+  maxSignals: 5,
+  whitelistSymbols: ["ONDOUSDT", "SEIUSDT"],
+  activeIndicatorIds: ["built-in-squeeze", "built-in-volume-drive"],
+  scanIntervalMinutes: 15,
+  language: "tr",
+};
+
+export const mockSignals: SignalSnapshot[] = [
+  {
+    id: "sig-btc-breakout",
+    ownerId,
+    symbol: "BTCUSDT",
+    coinName: "Bitcoin",
+    trend: "LONG",
+    setup: "BREAKOUT_RETEST",
+    side: "LONG",
+    entry: 84250,
+    stop: 82640,
+    tp1: 86700,
+    tp2: 88950,
+    riskReward: 2.92,
+    score: 91,
+    confidence: 0.84,
+    summary:
+      "1D ve 4H EMA200 üzeri trend korunuyor. 4H kırılım sonrası retest bölgesinde tutunma ve hacim teyidi var.",
+    reasons: [
+      "4H EMA200 üstünde kalıcılık",
+      "Kırılan direnç retest edildi",
+      "Volume SMA20 üzerinde breakout hacmi",
+      "Funding hafif negatif, squeeze lehine",
+    ],
+    createdAt: now,
+    updatedAt: now,
+    technicalSnapshot: {
+      dailyClose: 84250,
+      dailyEma200: 73100,
+      fourHourClose: 84250,
+      fourHourEma200: 81240,
+      rsi: 53.2,
+      bollingerUpper: 85110,
+      bollingerMiddle: 83220,
+      bollingerLower: 81340,
+      volumeRatio: 1.44,
+      atr: 1210,
+      bbWidth: 0.042,
+    },
+    marketMetrics: {
+      latestFundingRate: -0.0007,
+      openInterestTrendPct: 2.4,
+      squeezeBias: "HIGH_SHORT_SQUEEZE",
+    },
+  },
+  {
+    id: "sig-ondo-squeeze",
+    ownerId,
+    symbol: "ONDOUSDT",
+    coinName: "Ondo",
+    trend: "LONG",
+    setup: "CONSOLIDATION_BREAKOUT",
+    side: "LONG",
+    entry: 1.32,
+    stop: 1.25,
+    tp1: 1.43,
+    tp2: 1.51,
+    riskReward: 2.71,
+    score: 88,
+    confidence: 0.79,
+    summary:
+      "Yatay sıkışma, daralan Bollinger bandı ve artan hacim ile breakout teyidi. Negatif funding + yükselen OI kısa squeeze olasılığını artırıyor.",
+    reasons: [
+      "Band sıkışması düşük",
+      "Breakout mumu hacim destekli",
+      "Funding negatif",
+      "Open interest artıyor",
+    ],
+    createdAt: now,
+    updatedAt: now,
+    technicalSnapshot: {
+      dailyClose: 1.32,
+      dailyEma200: 1.07,
+      fourHourClose: 1.32,
+      fourHourEma200: 1.24,
+      rsi: 51.1,
+      bollingerUpper: 1.34,
+      bollingerMiddle: 1.28,
+      bollingerLower: 1.21,
+      volumeRatio: 1.62,
+      atr: 0.05,
+      bbWidth: 0.031,
+    },
+    marketMetrics: {
+      latestFundingRate: -0.0018,
+      openInterestTrendPct: 5.1,
+      squeezeBias: "HIGH_SHORT_SQUEEZE",
+    },
+  },
+  {
+    id: "sig-eth-bounce",
+    ownerId,
+    symbol: "ETHUSDT",
+    coinName: "Ethereum",
+    trend: "LONG",
+    setup: "SUPPORT_BOUNCE",
+    side: "LONG",
+    entry: 4520,
+    stop: 4380,
+    tp1: 4730,
+    tp2: 4880,
+    riskReward: 2.57,
+    score: 83,
+    confidence: 0.76,
+    summary:
+      "4H orta Bollinger bandı destek gibi çalışıyor. RSI 50 üstü geri kazanılmış durumda ve hacim nötrden güçlüye dönüyor.",
+    reasons: [
+      "Middle band support",
+      "RSI 50 reclaim",
+      "Trend filtresi long lehine",
+    ],
+    createdAt: now,
+    updatedAt: now,
+    technicalSnapshot: {
+      dailyClose: 4520,
+      dailyEma200: 3985,
+      fourHourClose: 4520,
+      fourHourEma200: 4442,
+      rsi: 54.6,
+      bollingerUpper: 4621,
+      bollingerMiddle: 4470,
+      bollingerLower: 4319,
+      volumeRatio: 1.13,
+      atr: 118,
+      bbWidth: 0.037,
+    },
+    marketMetrics: {
+      latestFundingRate: -0.0002,
+      openInterestTrendPct: 1.1,
+      squeezeBias: "NEUTRAL",
+    },
+  },
+];
+
+export const mockSignalCandidates: SignalCandidate[] = mockSignals.map(
+  (signal, index) => ({
+    ...signal,
+    rankingPosition: index + 1,
+    penalties: [],
+    bonuses: signal.reasons.slice(0, 2),
+  }),
+);
+
+export const mockTrades: TradeJournalEntry[] = [
+  {
+    id: "trade-1",
+    ownerId,
+    signalId: "sig-btc-breakout",
+    symbol: "BTCUSDT",
+    setup: "BREAKOUT_RETEST",
+    side: "LONG",
+    leverage: 2,
+    entryPrice: 83980,
+    stopLoss: 82640,
+    tp1: 86700,
+    tp2: 88950,
+    status: "OPEN",
+    openedAt: now,
+    closedAt: null,
+    closePrice: null,
+    realizedRMultiple: null,
+    realizedPnlPct: null,
+    notes: "Retest sonrası manuel seçildi.",
+  },
+  {
+    id: "trade-2",
+    ownerId,
+    signalId: "sig-eth-bounce",
+    symbol: "ETHUSDT",
+    setup: "SUPPORT_BOUNCE",
+    side: "LONG",
+    leverage: 2,
+    entryPrice: 4475,
+    stopLoss: 4380,
+    tp1: 4730,
+    tp2: 4880,
+    status: "CLOSED",
+    openedAt: "2026-03-15T08:30:00.000Z",
+    closedAt: "2026-03-16T12:00:00.000Z",
+    closePrice: 4728,
+    realizedRMultiple: 2.66,
+    realizedPnlPct: 5.65,
+    notes: "TP1 civarı manuel kapatıldı.",
+  },
+];
+
+export const mockIndicators: IndicatorDefinition[] = [
+  {
+    id: "built-in-squeeze",
+    ownerId,
+    name: "Negative Funding Squeeze",
+    description:
+      "Funding negatifken ve OI artarken long squeeze adayı coinlere pozitif skor verir.",
+    version: 1,
+    status: "LIVE",
+    builtIn: true,
+    scoreAdjustment: 7,
+    createdAt: now,
+    approvedAt: now,
+    dsl: {
+      metadata: {
+        id: "built-in-squeeze",
+        name: "Negative Funding Squeeze",
+        description: "Negatif funding + artan OI bonusu",
+        version: 1,
+      },
+      series: [],
+      condition: {
+        kind: "logic",
+        operator: "AND",
+        nodes: [
+          {
+            kind: "comparison",
+            comparator: "LT",
+            left: { source: "funding", valueKey: "latest" },
+            right: { source: "value", value: 0 },
+          },
+          {
+            kind: "comparison",
+            comparator: "GT",
+            left: { source: "openInterest", valueKey: "deltaPct" },
+            right: { source: "value", value: 1.5 },
+          },
+        ],
+      },
+      scoreAdjustment: 7,
+      reasonLabel: "Funding/OI squeeze bonusu",
+    },
+  },
+  {
+    id: "built-in-volume-drive",
+    ownerId,
+    name: "Volume Drive",
+    description: "Hacim oranı 1.25 üzerindeyse breakout kalitesini destekler.",
+    version: 1,
+    status: "LIVE",
+    builtIn: true,
+    scoreAdjustment: 5,
+    createdAt: now,
+    approvedAt: now,
+    dsl: {
+      metadata: {
+        id: "built-in-volume-drive",
+        name: "Volume Drive",
+        description: "Hacim destekli hareket bonusu",
+        version: 1,
+      },
+      series: [],
+      condition: {
+        kind: "comparison",
+        comparator: "GT",
+        left: { source: "price", field: "volume", timeframe: "4H" },
+        right: { source: "value", value: 1.25 },
+      },
+      scoreAdjustment: 5,
+      reasonLabel: "Hacim sürükleyici bonusu",
+    },
+  },
+];
+
+export const mockIndicatorProposals: IndicatorProposal[] = [
+  {
+    id: "proposal-rsi-trend-sync",
+    ownerId,
+    status: "PENDING",
+    createdAt: now,
+    rationale:
+      "Gerçekleşen kazançlı işlemlerinin çoğunda 1D EMA200 yönü ile 4H RSI reclaim birlikte görülüyor.",
+    summary:
+      "1D trend yönünde, 4H RSI 50 reclaim ve Bollinger middle band destek kombinasyonunu shadow modda dene.",
+    basedOnTradeIds: ["trade-2"],
+    proposal: {
+      id: "dyn-rsi-trend-sync",
+      ownerId,
+      name: "RSI Trend Sync",
+      description:
+        "1D trend yönü ile 4H RSI reclaim birleşimini skorlayan dinamik filtre.",
+      version: 1,
+      status: "DRAFT",
+      builtIn: false,
+      scoreAdjustment: 6,
+      createdAt: now,
+      approvedAt: null,
+      dsl: {
+        metadata: {
+          id: "dyn-rsi-trend-sync",
+          name: "RSI Trend Sync",
+          description: "Trend uyumlu RSI reclaim filtresi",
+          version: 1,
+        },
+        series: [
+          {
+            id: "rsi-4h",
+            primitive: "RSI",
+            timeframe: "4H",
+            params: { period: 14 },
+          },
+        ],
+        condition: {
+          kind: "logic",
+          operator: "AND",
+          nodes: [
+            {
+              kind: "comparison",
+              comparator: "GT",
+              left: { source: "series", ref: "rsi-4h" },
+              right: { source: "value", value: 50 },
+            },
+            {
+              kind: "comparison",
+              comparator: "GT",
+              left: { source: "funding", valueKey: "latest" },
+              right: { source: "value", value: -0.0025 },
+            },
+          ],
+        },
+        scoreAdjustment: 6,
+        reasonLabel: "RSI Trend Sync bonusu",
+      },
+    },
+  },
+];
+
+export const mockAIReviews: TradeReviewReport[] = [
+  {
+    id: "review-eth-1",
+    ownerId,
+    tradeId: "trade-2",
+    type: "TRADE_REVIEW",
+    summary:
+      "ETH işleminde trend ve destek okuması doğruydu. Güçlü tarafın giriş zamanlaması, zayıf tarafın erken kar alma eğilimi.",
+    mistakes: ["TP2 alanına kadar taşıyabilecek momentum varken erken kapama yapılmış."],
+    improvements: [
+      "İlk hedefe ulaştıktan sonra kalan pozisyonu ATR trailing ile yönet.",
+      "Aynı setup için volume ratio > 1.2 olduğunda ikinci hedefi zorla.",
+    ],
+    proposedIndicatorIds: ["dyn-rsi-trend-sync"],
+    confidence: 0.82,
+    createdAt: now,
+  },
+];
+
+export const mockScanRuns: ScanRun[] = [
+  {
+    id: "scan-2026-03-17-1815",
+    ownerId,
+    startedAt: "2026-03-17T18:15:00.000Z",
+    completedAt: "2026-03-17T18:15:21.000Z",
+    scannedSymbols: 214,
+    shortlistedSymbols: 18,
+    topSignalIds: mockSignals.map((signal) => signal.id),
+    notes: [
+      "Global top 200 + 2 whitelist coin işlendi.",
+      "Funding/OI bonusu sadece shortlist coinlerde uygulandı.",
+    ],
+  },
+];
+
+export const mockOwnerId = ownerId;

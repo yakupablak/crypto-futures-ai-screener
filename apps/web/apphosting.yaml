@@ -1,0 +1,6 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+env:
+  - variable: NEXT_PUBLIC_ENABLE_MOCK_DATA
+    value: "true"

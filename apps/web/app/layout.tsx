@@ -1,0 +1,37 @@
+import type { Metadata } from "next";
+import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+
+import { AppShell } from "@/components/layout/app-shell";
+
+import "./globals.css";
+
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
+const body = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+});
+
+export const metadata: Metadata = {
+  title: "Crypto Futures AI Screener",
+  description: "Binance futures tarama, trade journal ve AI koç paneli.",
+};
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="tr" className={`${display.variable} ${body.variable}`}>
+      <body style={{ fontFamily: "var(--font-body)" }}>
+        <div style={{ fontFamily: "var(--font-display)" }} className="sr-only" />
+        <AppShell>{children}</AppShell>
+      </body>
+    </html>
+  );
+}
