@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "clean:web-cache": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const base=path.join(process.cwd(),'apps','web'); ['.next','.next-dev','tsconfig.tsbuildinfo'].forEach((name)=>{const target=path.join(base,name); fs.rmSync(target,{recursive:true,force:true}); console.log('removed', target);});\"",
     "dev": "npm run dev --workspace @crypto-futures/web",
     "dev:web": "npm run dev --workspace @crypto-futures/web",
     "dev:functions": "npm run dev --workspace @crypto-futures/functions",

@@ -210,6 +210,7 @@ It runs:
 If port `3000` is already taken, Next.js will automatically move to another port such as `3001`.
 
 ## Available Scripts
+- `npm run clean:web-cache`
 - `npm run dev:web`
 - `npm run dev:functions`
 - `npm run live:worker`
@@ -274,11 +275,30 @@ Expected outcome:
 - AI trade review works with fallback protection
 - AI indicator suggestions no longer fail on malformed Gemini output
 - duplicate AI indicator proposals are deduped and no longer repeatedly shown as pending
+- Next.js local dev server now uses an isolated `.next-dev` output so `dev` and `build` no longer corrupt each other's artifacts
+- `GET /ai` and `POST /api/ai/suggest-indicators` were re-tested successfully before and after a full `next build`
 
 ## AI Coach Notes
 - If there are no closed trades yet, `suggest-indicators` returns a safe fallback proposal instead of failing
 - Once closed trades accumulate, Gemini-based personalized suggestions become more meaningful
 - If a newly requested proposal is effectively identical to an existing one, the system suppresses the duplicate instead of storing another pending copy
+
+## Troubleshooting
+### If you see missing chunk or manifest errors in local dev
+Errors like these usually mean a stale or mixed Next.js cache:
+- `Cannot find module './331.js'`
+- `ENOENT ... routes-manifest.json`
+
+Recovery steps:
+```bash
+npm run clean:web-cache
+npm run dev:live
+```
+
+Notes:
+- local development uses `apps/web/.next-dev`
+- production build output uses `apps/web/.next`
+- this separation prevents the dev server from breaking when a build is run in the same repo
 
 ## Security Notes
 - Do not commit:

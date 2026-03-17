@@ -27,7 +27,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang="tr"
+      className={`${display.variable} ${body.variable}`}
+      suppressHydrationWarning
+    >
       <body style={{ fontFamily: "var(--font-body)" }}>
         <div style={{ fontFamily: "var(--font-display)" }} className="sr-only" />
         <AppShell>{children}</AppShell>

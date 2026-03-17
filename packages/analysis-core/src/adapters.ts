@@ -28,7 +28,7 @@ async function fetchJson<T>(
 ): Promise<T> {
   const startedAt = Date.now();
   const requestUrl = typeof url === "string" ? url : url.toString();
-  logger.info("External request started", {
+  logger.debug("External request started", {
     label,
     method: init?.method ?? "GET",
     url: requestUrl,
@@ -59,7 +59,7 @@ async function fetchJson<T>(
         durationMs,
       });
     } else {
-      logger.info("External request completed", {
+      logger.debug("External request completed", {
         label,
         url: requestUrl,
         status: response.status,

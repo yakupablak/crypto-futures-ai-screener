@@ -7,8 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typegen": "next typegen",
     "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "npm run typegen && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@crypto-futures/analysis-core": "file:../../packages/analysis-core",
