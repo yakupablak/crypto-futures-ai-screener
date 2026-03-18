@@ -3,8 +3,15 @@ import path from "node:path";
 
 export const env = {
   enableMockData: process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== "false",
+  firebaseApiKey:
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? process.env.FIREBASE_WEB_API_KEY,
+  firebaseAuthDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   firebaseProjectId:
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? process.env.FIREBASE_ADMIN_PROJECT_ID,
+  firebaseStorageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  firebaseMessagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  firebaseAppId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  firebaseMeasurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   appOwnerId: process.env.APP_OWNER_UID ?? "local-owner",
   geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-pro",
   geminiFastModel: process.env.GEMINI_FAST_MODEL ?? "gemini-2.5-flash-lite",

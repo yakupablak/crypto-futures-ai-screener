@@ -47,12 +47,12 @@ export function LoginForm() {
       </div>
 
       <div className="mt-6 space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-text">Kullanici adi</label>
+      <div className="space-y-2">
+          <label className="text-sm font-medium text-text">Kullanici adi veya e-posta</label>
           <Input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="ornek: yakup.trader.admin"
+            placeholder="ornek: yakup.trader.admin veya mail@adresin.com"
             autoComplete="username"
           />
         </div>

@@ -9,6 +9,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "auth:bootstrap": "node scripts/bootstrap-single-user.mjs",
+    "firebase:sync-web-config": "node scripts/sync-firebase-web-config.mjs",
+    "auth:promote-owner": "node scripts/promote-firebase-owner.mjs",
     "clean:web-cache": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const base=path.join(process.cwd(),'apps','web'); ['.next','.next-dev','tsconfig.tsbuildinfo'].forEach((name)=>{const target=path.join(base,name); fs.rmSync(target,{recursive:true,force:true}); console.log('removed', target);});\"",
     "dev": "npm run dev --workspace @crypto-futures/web",
     "dev:web": "npm run dev --workspace @crypto-futures/web",
