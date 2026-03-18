@@ -343,6 +343,81 @@ export const modelUsageLogSchema = z.object({
 });
 export type ModelUsageLog = z.infer<typeof modelUsageLogSchema>;
 
+export const performanceBreakdownSchema = z.object({
+  total: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  winRate: z.number(),
+  expectancyR: z.number(),
+  averageR: z.number(),
+  averagePnlPct: z.number(),
+  averageWinPnlPct: z.number(),
+  averageLossPnlPct: z.number(),
+  averageWinR: z.number(),
+  averageLossR: z.number(),
+  profitFactor: z.number().nullable(),
+  averageHoldMinutes: z.number(),
+  medianHoldMinutes: z.number(),
+});
+export type PerformanceBreakdown = z.infer<typeof performanceBreakdownSchema>;
+
+export const performanceSetupStatSchema = performanceBreakdownSchema.extend({
+  setup: setupTypeSchema,
+});
+export type PerformanceSetupStat = z.infer<typeof performanceSetupStatSchema>;
+
+export const performanceSideStatSchema = performanceBreakdownSchema.extend({
+  side: tradeSideSchema,
+});
+export type PerformanceSideStat = z.infer<typeof performanceSideStatSchema>;
+
+export const performanceSnapshotSchema = z.object({
+  ownerId: z.string(),
+  updatedAt: z.string(),
+  totalClosedTrades: z.number(),
+  overallWinRate: z.number(),
+  expectancyR: z.number(),
+  averageR: z.number(),
+  averagePnlPct: z.number(),
+  averageWinPnlPct: z.number(),
+  averageLossPnlPct: z.number(),
+  averageHoldMinutes: z.number(),
+  medianHoldMinutes: z.number(),
+  profitFactor: z.number().nullable(),
+  setupStats: z.array(performanceSetupStatSchema),
+  sideStats: z.array(performanceSideStatSchema),
+});
+export type PerformanceSnapshot = z.infer<typeof performanceSnapshotSchema>;
+
+export const walkForwardSetupStatSchema = z.object({
+  setup: setupTypeSchema,
+  signals: z.number(),
+  winRate: z.number(),
+  expectancyR: z.number(),
+});
+export type WalkForwardSetupStat = z.infer<typeof walkForwardSetupStatSchema>;
+
+export const walkForwardSummarySchema = z.object({
+  ownerId: z.string(),
+  updatedAt: z.string(),
+  symbolsEvaluated: z.number(),
+  barsEvaluated: z.number(),
+  totalSignals: z.number(),
+  trainSignals: z.number(),
+  testSignals: z.number(),
+  trainWinRate: z.number(),
+  testWinRate: z.number(),
+  trainExpectancyR: z.number(),
+  testExpectancyR: z.number(),
+  testAveragePnlPct: z.number(),
+  testProfitFactor: z.number().nullable(),
+  averageBarsHeld: z.number(),
+  signalDensityPer100Bars: z.number(),
+  setupBreakdown: z.array(walkForwardSetupStatSchema),
+  notes: z.array(z.string()),
+});
+export type WalkForwardSummary = z.infer<typeof walkForwardSummarySchema>;
+
 export const collections = [
   "users",
   "settings",

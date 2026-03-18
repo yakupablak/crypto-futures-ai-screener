@@ -22,7 +22,7 @@ export function ApproveProposalButton({ proposalId }: { proposalId: string }) {
         });
       }}
     >
-      {isPending ? "Onaylanıyor..." : "Shadow Olarak Ekle"}
+      {isPending ? "Onaylaniyor..." : "Shadow olarak ekle"}
     </Button>
   );
 }
@@ -44,7 +44,7 @@ export function ToggleIndicatorButton({ indicatorId }: { indicatorId: string }) 
         });
       }}
     >
-      {isPending ? "Güncelleniyor..." : "Durumu Değiştir"}
+      {isPending ? "Guncelleniyor..." : "Durumu degistir"}
     </Button>
   );
 }

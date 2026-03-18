@@ -32,3 +32,53 @@ export function formatPercent(value: number | null | undefined) {
 
   return `${value.toFixed(2)}%`;
 }
+
+export function formatRatio(value: number | null | undefined, digits = 2) {
+  if (value == null) {
+    return "-";
+  }
+
+  return value.toFixed(digits);
+}
+
+export function formatRMultiple(value: number | null | undefined, digits = 2) {
+  if (value == null) {
+    return "-";
+  }
+
+  return `${value.toFixed(digits)}R`;
+}
+
+export function formatSetupLabel(value: string) {
+  const map: Record<string, string> = {
+    BREAKOUT_RETEST: "Breakout Retest",
+    SUPPORT_BOUNCE: "Destekten Tepki",
+    CONSOLIDATION_BREAKOUT: "Konsolidasyon Breakout",
+  };
+
+  return map[value] ?? value.replaceAll("_", " ");
+}
+
+export function formatTradeStatusLabel(value: string) {
+  const map: Record<string, string> = {
+    OPEN: "Acik",
+    CLOSED: "Kapali",
+  };
+
+  return map[value] ?? value.replaceAll("_", " ");
+}
+
+export function formatIndicatorStatusLabel(value: string) {
+  const map: Record<string, string> = {
+    DRAFT: "Taslak",
+    VALIDATED: "Dogrulandi",
+    SHADOW: "Shadow",
+    LIVE: "Canli",
+    DISABLED: "Pasif",
+    PENDING: "Bekliyor",
+    APPROVED: "Onayli",
+    REJECTED: "Reddedildi",
+  };
+
+  return map[value] ?? value.replaceAll("_", " ");
+}

@@ -13,6 +13,7 @@ import { config } from "../lib/config";
 import { getSettings, listIndicators, listMarketUniverse, replaceSignals } from "../lib/persistence";
 
 const logger = createLogger("runMarketScanJob");
+const CORE_SHORTLIST_LIMIT = 40;
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -42,6 +43,7 @@ function summarizeRejections(
     RSI_FILTER: 0,
     NO_SETUP: 0,
     INVALID_TARGET: 0,
+    INSUFFICIENT_DATA: 0,
   };
 
   for (const result of results) {
@@ -61,7 +63,7 @@ export async function runMarketScanJob() {
     listIndicators(),
   ]);
 
-  const activeUniverse = universe.slice(0, 220);
+  const activeUniverse = universe;
   logger.info("Market scan started", {
     activeUniverseCount: activeUniverse.length,
     indicatorCount: indicators.length,
@@ -88,11 +90,16 @@ export async function runMarketScanJob() {
   );
   const rejectionSummary = summarizeRejections(preliminaryAnalysis);
 
-  const initialRanking = rankSignals(preliminaryInputs, indicators);
-  const shortlist = initialRanking.candidates.slice(0, 20).map((candidate) => candidate.symbol);
+  const structurallyValidSymbols = preliminaryAnalysis
+    .filter((result) => result.candidate != null)
+    .map((result) => result.candidate)
+    .filter((candidate): candidate is NonNullable<typeof candidate> => candidate != null)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, Math.max(settings.maxSignals * 8, CORE_SHORTLIST_LIMIT))
+    .map((candidate) => candidate.symbol);
 
   const enhancedInputs = await mapWithConcurrency(
-    preliminaryInputs.filter((input) => shortlist.includes(input.symbol)),
+    preliminaryInputs.filter((input) => structurallyValidSymbols.includes(input.symbol)),
     4,
     async (input) => ({
       ...input,
@@ -130,11 +137,13 @@ export async function runMarketScanJob() {
       .map((candidate) => candidate.id),
     notes: [
       `Tarama evreni: ${activeUniverse.length} coin`,
+      `Yapisal olarak gecerli bulunan ilk aday seti: ${structurallyValidSymbols.length}`,
+      `Yetersiz veri nedeniyle elenen: ${rejectionSummary.INSUFFICIENT_DATA}`,
       `Trend uyumsuz veya EMA200 yakinligi nedeniyle elenen: ${rejectionSummary.TREND_NEUTRAL}`,
       `RSI filtresinden elenen: ${rejectionSummary.RSI_FILTER}`,
       `Setup bulunamayan: ${rejectionSummary.NO_SETUP}`,
-      `Funding/OI derin inceleme yapilan shortlist: ${shortlist.length}`,
-      "Dynamic indicator catalog skora dahil edildi.",
+      `Funding/OI derin inceleme yapilan shortlist: ${enhancedInputs.length}`,
+      `Canli indicator katalogu: ${indicators.filter((indicator) => indicator.status === "LIVE").length}`,
     ],
   };
 
@@ -144,7 +153,8 @@ export async function runMarketScanJob() {
   const logPayload = {
     durationMs,
     scannedSymbols: activeUniverse.length,
-    shortlistCount: shortlist.length,
+    structuralCandidateCount: structurallyValidSymbols.length,
+    shortlistCount: enhancedInputs.length,
     candidateCount: candidates.length,
     signalCount: topSignals.length,
     rejectionSummary,
@@ -162,9 +172,9 @@ export async function runMarketScanJob() {
     signalCount: topSignals.length,
     candidateCount: candidates.length,
     scannedSymbols: activeUniverse.length,
-    shortlistCount: shortlist.length,
+    shortlistCount: enhancedInputs.length,
+    structuralCandidateCount: structurallyValidSymbols.length,
     rejectionSummary,
     durationMs,
   };
 }
-

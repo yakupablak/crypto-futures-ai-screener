@@ -3,21 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #0d1117;
-  --color-panel: #121a24;
+  --color-bg: #07111a;
+  --color-panel: #0f1b26;
   --color-line: rgba(255, 255, 255, 0.08);
-  --color-text: #f4efe6;
-  --color-muted: #9ea6b2;
-  --color-accent: #ff8f3d;
-  --color-accent-soft: #1d2a36;
-  --color-success: #27c281;
-  --color-danger: #ff5d5d;
+  --color-text: #f5f1e8;
+  --color-muted: #97a6b5;
+  --color-accent: #ff9a47;
+  --color-accent-soft: #162433;
+  --color-success: #2dd18f;
+  --color-danger: #ff6a6a;
   --color-warning: #f3c969;
   --color-focus: rgba(255, 143, 61, 0.45);
-  background:
-    radial-gradient(circle at top left, rgba(255, 143, 61, 0.18), transparent 34%),
-    radial-gradient(circle at top right, rgba(39, 194, 129, 0.12), transparent 26%),
-    linear-gradient(180deg, #0d1117 0%, #0b0f14 100%);
 }
 
 * {
@@ -29,10 +25,40 @@ html {
 }
 
 body {
+  position: relative;
   margin: 0;
   min-height: 100vh;
   color: var(--color-text);
-  background: transparent;
+  background:
+    radial-gradient(circle at top left, rgba(255, 154, 71, 0.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(45, 209, 143, 0.12), transparent 18%),
+    radial-gradient(circle at 50% 120%, rgba(255, 154, 71, 0.08), transparent 28%),
+    linear-gradient(180deg, #07111a 0%, #09131d 46%, #071019 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, black, transparent 82%);
+  opacity: 0.5;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 154, 71, 0.14), transparent 12%),
+    radial-gradient(circle at 88% 12%, rgba(45, 209, 143, 0.12), transparent 11%),
+    radial-gradient(circle at 74% 84%, rgba(255, 255, 255, 0.04), transparent 14%);
+  opacity: 0.8;
 }
 
 a {
@@ -54,7 +80,52 @@ select {
 .glass-panel {
   border: 1px solid var(--color-line);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
     var(--color-panel);
   backdrop-filter: blur(12px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.metric-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012)),
+    rgba(5, 12, 20, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.soft-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 12, 20, 0.36);
+}
+
+.page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.data-grid {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
 }

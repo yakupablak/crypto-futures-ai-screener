@@ -10,6 +10,11 @@ const TARGET_UNIVERSE_SIZE = 200;
 const COINGECKO_PAGE_SIZE = 250;
 const MAX_COINGECKO_PAGES = 8;
 
+function normalizeWhitelistSymbol(symbol: string) {
+  const normalized = symbol.toUpperCase().replace("/", "").trim();
+  return normalized.endsWith("USDT") ? normalized : `${normalized}USDT`;
+}
+
 export async function refreshUniverseJob() {
   logger.info("Universe refresh started", {
     targetUniverseSize: TARGET_UNIVERSE_SIZE,
@@ -74,7 +79,7 @@ export async function refreshUniverseJob() {
 
   const whitelistEntries = settings.whitelistSymbols.reduce<MarketUniverseEntry[]>(
     (entries, symbol) => {
-      const normalizedSymbol = symbol.toUpperCase().replace("/", "");
+      const normalizedSymbol = normalizeWhitelistSymbol(symbol);
       const matched = binanceSymbols.find((item) => item.symbol === normalizedSymbol);
       if (!matched) {
         return entries;

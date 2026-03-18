@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "glass-panel rounded-panel shadow-panel",
+        "glass-panel relative rounded-[32px] shadow-panel",
         className,
       )}
     >

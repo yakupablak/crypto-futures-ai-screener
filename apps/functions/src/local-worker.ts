@@ -39,6 +39,7 @@ async function start() {
   let lastUniverseRun = 0;
   let lastShadowRun = 0;
   let lastPerformanceRun = 0;
+  let lastWalkForwardRun = 0;
 
   await writeWorkerState({
     status: "STARTING",
@@ -55,6 +56,8 @@ async function start() {
       const includeShadow = lastShadowRun === 0 || now - lastShadowRun >= ONE_HOUR_MS;
       const includePerformance =
         lastPerformanceRun === 0 || now - lastPerformanceRun >= FIFTEEN_MINUTES_MS;
+      const includeWalkForward =
+        lastWalkForwardRun === 0 || now - lastWalkForwardRun >= SIX_HOURS_MS;
 
       await writeWorkerState({
         status: "SYNCING",
@@ -65,6 +68,7 @@ async function start() {
         includeUniverse,
         includeShadow,
         includePerformance,
+        includeWalkForward,
         nextScanIntervalMinutes: settings.scanIntervalMinutes,
       });
 
@@ -73,6 +77,7 @@ async function start() {
         includeScan: true,
         includeShadow,
         includePerformance,
+        includeWalkForward,
       });
 
       const completedAt = new Date().toISOString();
@@ -84,6 +89,9 @@ async function start() {
       }
       if (includePerformance) {
         lastPerformanceRun = now;
+      }
+      if (includeWalkForward) {
+        lastWalkForwardRun = now;
       }
 
       await writeWorkerState({

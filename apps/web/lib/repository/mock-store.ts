@@ -2,15 +2,18 @@ import {
   mockAIReviews,
   mockIndicatorProposals,
   mockIndicators,
+  mockPerformanceSnapshot,
   mockScanRuns,
   mockSettings,
   mockSignalCandidates,
   mockSignals,
   mockTrades,
+  mockWalkForwardSummary,
   tradeClosePayloadSchema,
   type CreateTradePayload,
   type IndicatorDefinition,
   type IndicatorProposal,
+  type PerformanceSnapshot,
   type ScanRun,
   type SignalCandidate,
   type SignalSnapshot,
@@ -18,6 +21,7 @@ import {
   type TradeJournalEntry,
   type TradeReviewReport,
   type UserSettings,
+  type WalkForwardSummary,
 } from "@crypto-futures/shared";
 
 import type { DashboardData, DataRepository } from "./types";
@@ -31,6 +35,8 @@ interface MockDatabase {
   reviews: TradeReviewReport[];
   scanRuns: ScanRun[];
   settings: UserSettings;
+  performance: PerformanceSnapshot | null;
+  walkForward: WalkForwardSummary | null;
 }
 
 declare global {
@@ -52,6 +58,8 @@ function getStore(): MockDatabase {
       reviews: clone(mockAIReviews),
       scanRuns: clone(mockScanRuns),
       settings: clone(mockSettings),
+      performance: clone(mockPerformanceSnapshot),
+      walkForward: clone(mockWalkForwardSummary),
     };
   }
 
@@ -84,6 +92,8 @@ export class MockRepository implements DataRepository {
       indicators: clone(store.indicators),
       proposals: clone(store.proposals),
       settings: clone(store.settings),
+      performance: clone(store.performance),
+      walkForward: clone(store.walkForward),
     };
   }
 

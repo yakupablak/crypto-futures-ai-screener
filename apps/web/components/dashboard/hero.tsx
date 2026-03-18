@@ -2,9 +2,8 @@ import { formatDistanceToNowStrict } from "date-fns";
 
 import type { DashboardData } from "@/lib/repository/types";
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { SectionTitle } from "@/components/ui/section-title";
+import { PageHeader } from "@/components/ui/page-header";
+import { formatPercent, formatRMultiple } from "@/lib/utils";
 
 export function DashboardHero({ data }: { data: DashboardData }) {
   const openTrades = data.trades.filter((trade) => trade.status === "OPEN").length;
@@ -15,56 +14,67 @@ export function DashboardHero({ data }: { data: DashboardData }) {
       : (closedTrades.filter((trade) => (trade.realizedPnlPct ?? 0) > 0).length /
           closedTrades.length) *
         100;
+  const bestSignal = data.signals[0];
 
   return (
-    <Card className="overflow-hidden p-6 md:p-8">
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-5">
-          <Badge tone="warning">Top 200 + Whitelist Scanner</Badge>
-          <SectionTitle
-            eyebrow="Screener Dashboard"
-            title="En güçlü teknik yapı, pump potansiyeli ve risk/ödül dengesini aynı akışta gör."
-            description="Binance USDT perpetual evreni, deterministik futures kuralları ve AI destekli trade hafızası tek panelde birleşiyor."
-          />
-          <div className="flex flex-wrap gap-3 text-sm text-muted">
-            <span>
-              Son tarama:{" "}
-              <strong className="text-text">
-                {data.latestScan
-                  ? formatDistanceToNowStrict(new Date(data.latestScan.completedAt), {
-                      addSuffix: true,
-                    })
-                  : "Henüz yok"}
-              </strong>
-            </span>
-            <span>•</span>
-            <span>
-              Tarama evreni: <strong className="text-text">{data.latestScan?.scannedSymbols ?? 0}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              Shortlist: <strong className="text-text">{data.latestScan?.shortlistedSymbols ?? 0}</strong>
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { label: "Aktif Sinyal", value: data.signals.length.toString() },
-            { label: "Açık Trade", value: openTrades.toString() },
-            { label: "Win Rate", value: `${winRate.toFixed(0)}%` },
-            { label: "AI Review", value: data.aiReviews.length.toString() },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-3xl border border-white/10 bg-black/20 p-4"
-            >
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">{item.label}</p>
-              <p className="mt-3 text-3xl font-semibold text-text">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Card>
+    <PageHeader
+      eyebrow="Screener Dashboard"
+      title="En guclu sinyalleri, aktif trade'leri ve son tarama nabzini tek bakista gor."
+      description="Binance USDT perpetual evreni, deterministik futures kurallari ve AI destekli trade hafizasi ayni kontrol katmaninda birlesiyor."
+      chips={[
+        { label: "Top 200 + Whitelist", tone: "warning" },
+        ...(bestSignal ? [{ label: `Lider: ${bestSignal.symbol}`, tone: "success" as const }] : []),
+      ]}
+      stats={[
+        {
+          label: "Son Tarama",
+          value: data.latestScan
+            ? formatDistanceToNowStrict(new Date(data.latestScan.completedAt), {
+                addSuffix: true,
+              })
+            : "Henuz yok",
+          hint: `${data.latestScan?.scannedSymbols ?? 0} coin tarandi`,
+          tone: "accent",
+        },
+        {
+          label: "Aktif Sinyal",
+          value: data.signals.length.toString(),
+          hint: `${data.latestScan?.shortlistedSymbols ?? 0} aday shortlist'e girdi`,
+        },
+        {
+          label: "Canli Expectancy",
+          value: formatRMultiple(data.performance?.expectancyR ?? null),
+          hint:
+            data.performance != null
+              ? `${data.performance.totalClosedTrades} kapali trade, PF ${data.performance.profitFactor?.toFixed(2) ?? "-"}`
+              : `${closedTrades.length} kapanmis islem hafizada`,
+          tone:
+            (data.performance?.expectancyR ?? 0) > 0
+              ? "success"
+              : data.performance
+                ? "warning"
+                : "neutral",
+        },
+        {
+          label: "Walk-Forward Test",
+          value:
+            data.walkForward != null
+              ? formatRMultiple(data.walkForward.testExpectancyR)
+              : `${winRate.toFixed(0)}%`,
+          hint:
+            data.walkForward != null
+              ? `${data.walkForward.testSignals} out-of-sample signal, WR ${formatPercent(data.walkForward.testWinRate)}`
+              : `${data.aiReviews.length} AI review mevcut, ${openTrades} acik trade`,
+          tone:
+            (data.walkForward?.testExpectancyR ?? 0) > 0
+              ? "success"
+              : data.walkForward
+                ? "warning"
+                : winRate >= 50
+                  ? "success"
+                  : "warning",
+        },
+      ]}
+    />
   );
 }

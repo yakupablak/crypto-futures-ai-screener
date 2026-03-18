@@ -5,6 +5,7 @@ import { aggregatePerformanceJob } from "./jobs/aggregate-performance";
 import { evaluateShadowIndicatorsJob } from "./jobs/evaluate-shadow-indicators";
 import { refreshUniverseJob } from "./jobs/refresh-universe";
 import { runMarketScanJob } from "./jobs/run-market-scan";
+import { runWalkForwardJob } from "./jobs/run-walk-forward";
 import { config } from "./lib/config";
 import { approveIndicatorProposalHttp } from "./http/approve-indicator-proposal";
 import { reviewTradeHttp } from "./http/review-trade";
@@ -47,5 +48,13 @@ export const aggregatePerformance = onSchedule(
   async () => {
     const result = await aggregatePerformanceJob();
     logger.info("aggregatePerformance completed", result);
+  },
+);
+
+export const runWalkForward = onSchedule(
+  { schedule: "every 6 hours", region: config.region, timeoutSeconds: 540 },
+  async () => {
+    const result = await runWalkForwardJob();
+    logger.info("runWalkForward completed", result);
   },
 );

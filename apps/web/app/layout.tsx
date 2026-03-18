@@ -18,7 +18,7 @@ const body = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   title: "Crypto Futures AI Screener",
-  description: "Binance futures tarama, trade journal ve AI koç paneli.",
+  description: "Binance futures tarama, trade journal ve AI coach paneli.",
 };
 
 export default async function RootLayout({
@@ -39,3 +39,4 @@ export default async function RootLayout({
     </html>
   );
 }
+

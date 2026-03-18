@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export function SelectTradeButton({ signalId }: { signalId: string }) {
   const router = useRouter();
@@ -11,12 +12,18 @@ export function SelectTradeButton({ signalId }: { signalId: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="space-y-3">
-      <textarea
+    <div className="space-y-4">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Trade Notu</p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Bu sinyali neden sectigini yazman, daha sonra AI review kalitesini belirgin bicimde
+          artirir.
+        </p>
+      </div>
+      <Textarea
         value={notes}
         onChange={(event) => setNotes(event.target.value)}
-        placeholder="İşlemi neden seçtiğine dair kısa not ekleyebilirsin."
-        className="min-h-28 w-full rounded-3xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-text outline-none placeholder:text-muted"
+        placeholder="Ornek: 4H retest temizdi, stop kisaydi ve funding lehimeydi."
       />
       <Button
         className="w-full"
@@ -33,7 +40,7 @@ export function SelectTradeButton({ signalId }: { signalId: string }) {
           });
         }}
       >
-        {isPending ? "Kaydediliyor..." : "Bu işlemi seçiyorum"}
+        {isPending ? "Kaydediliyor..." : "Bu islemi seciyorum"}
       </Button>
     </div>
   );

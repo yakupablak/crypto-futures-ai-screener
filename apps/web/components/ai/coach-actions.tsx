@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 type FeedbackState = {
   tone: "success" | "error";
@@ -17,6 +18,20 @@ async function readErrorMessage(response: Response, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+function FeedbackBox({ feedback }: { feedback: Exclude<FeedbackState, null> }) {
+  return (
+    <p
+      className={
+        feedback.tone === "success"
+          ? "rounded-[18px] border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200"
+          : "rounded-[18px] border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-sm text-rose-200"
+      }
+    >
+      {feedback.message}
+    </p>
+  );
 }
 
 export function ReviewTradeButton({ tradeId }: { tradeId?: string }) {
@@ -55,13 +70,9 @@ export function ReviewTradeButton({ tradeId }: { tradeId?: string }) {
           });
         }}
       >
-        {isPending ? "Analiz ediliyor..." : "Trade Review Calistir"}
+        {isPending ? "Analiz ediliyor..." : "Trade review calistir"}
       </Button>
-      {feedback ? (
-        <p className={feedback.tone === "success" ? "text-sm text-emerald-300" : "text-sm text-rose-300"}>
-          {feedback.message}
-        </p>
-      ) : null}
+      {feedback ? <FeedbackBox feedback={feedback} /> : null}
     </div>
   );
 }
@@ -74,11 +85,10 @@ export function SuggestIndicatorsButton() {
 
   return (
     <div className="space-y-3">
-      <textarea
+      <Textarea
         value={context}
         onChange={(event) => setContext(event.target.value)}
-        placeholder="Istersen ek baglam yaz: ornegin breakout islemlerimde gec kaldigimi hissediyorum."
-        className="min-h-24 w-full rounded-3xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-text outline-none placeholder:text-muted"
+        placeholder="Ornek: breakout islemlerimde gec kaliyorum, daha erken teyit ariyorum."
       />
       <Button
         disabled={isPending}
@@ -113,13 +123,9 @@ export function SuggestIndicatorsButton() {
           });
         }}
       >
-        {isPending ? "Oneriler hazirlaniyor..." : "Yeni Indikator Oner"}
+        {isPending ? "Oneriler hazirlaniyor..." : "Yeni indikator oner"}
       </Button>
-      {feedback ? (
-        <p className={feedback.tone === "success" ? "text-sm text-emerald-300" : "text-sm text-rose-300"}>
-          {feedback.message}
-        </p>
-      ) : null}
+      {feedback ? <FeedbackBox feedback={feedback} /> : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type {
   CreateTradePayload,
   IndicatorDefinition,
   IndicatorProposal,
+  PerformanceSnapshot,
   ScanRun,
   SignalCandidate,
   SignalSnapshot,
@@ -9,6 +10,7 @@ import type {
   TradeJournalEntry,
   TradeReviewReport,
   UserSettings,
+  WalkForwardSummary,
 } from "@crypto-futures/shared";
 
 export interface DashboardData {
@@ -20,6 +22,8 @@ export interface DashboardData {
   indicators: IndicatorDefinition[];
   proposals: IndicatorProposal[];
   settings: UserSettings;
+  performance: PerformanceSnapshot | null;
+  walkForward: WalkForwardSummary | null;
 }
 
 export interface DataRepository {

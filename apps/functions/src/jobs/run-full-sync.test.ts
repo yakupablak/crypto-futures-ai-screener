@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   runMarketScanJobMock: vi.fn(),
   evaluateShadowIndicatorsJobMock: vi.fn(),
   aggregatePerformanceJobMock: vi.fn(),
+  runWalkForwardJobMock: vi.fn(),
 }));
 
 vi.mock("../lib/admin", () => ({
@@ -39,6 +40,10 @@ vi.mock("./aggregate-performance", () => ({
   aggregatePerformanceJob: mocks.aggregatePerformanceJobMock,
 }));
 
+vi.mock("./run-walk-forward", () => ({
+  runWalkForwardJob: mocks.runWalkForwardJobMock,
+}));
+
 import { runFullSync } from "./run-full-sync";
 
 describe("runFullSync", () => {
@@ -57,6 +62,7 @@ describe("runFullSync", () => {
     mocks.runMarketScanJobMock.mockResolvedValue({ signalCount: 3, candidateCount: 14 });
     mocks.evaluateShadowIndicatorsJobMock.mockResolvedValue({ shadowIndicatorCount: 2 });
     mocks.aggregatePerformanceJobMock.mockResolvedValue({ totalClosedTrades: 7 });
+    mocks.runWalkForwardJobMock.mockResolvedValue({ testExpectancyR: 0.31, testSignals: 9 });
   });
 
   it("runs all jobs by default and persists running + idle states", async () => {
@@ -66,6 +72,7 @@ describe("runFullSync", () => {
     expect(mocks.runMarketScanJobMock).toHaveBeenCalledTimes(1);
     expect(mocks.evaluateShadowIndicatorsJobMock).toHaveBeenCalledTimes(1);
     expect(mocks.aggregatePerformanceJobMock).toHaveBeenCalledTimes(1);
+    expect(mocks.runWalkForwardJobMock).not.toHaveBeenCalled();
     expect(result).toEqual({
       ownerId: "local-owner",
       universe: { count: 113 },
@@ -90,15 +97,18 @@ describe("runFullSync", () => {
       includeUniverse: false,
       includeShadow: false,
       includePerformance: false,
+      includeWalkForward: true,
     });
 
     expect(mocks.refreshUniverseJobMock).not.toHaveBeenCalled();
     expect(mocks.evaluateShadowIndicatorsJobMock).not.toHaveBeenCalled();
     expect(mocks.aggregatePerformanceJobMock).not.toHaveBeenCalled();
+    expect(mocks.runWalkForwardJobMock).toHaveBeenCalledTimes(1);
     expect(mocks.runMarketScanJobMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       ownerId: "local-owner",
       scan: { signalCount: 3, candidateCount: 14 },
+      walkForward: { testExpectancyR: 0.31, testSignals: 9 },
     });
   });
 

@@ -6,6 +6,7 @@ import { aggregatePerformanceJob } from "./aggregate-performance";
 import { evaluateShadowIndicatorsJob } from "./evaluate-shadow-indicators";
 import { refreshUniverseJob } from "./refresh-universe";
 import { runMarketScanJob } from "./run-market-scan";
+import { runWalkForwardJob } from "./run-walk-forward";
 
 const logger = createLogger("runFullSync");
 
@@ -14,6 +15,7 @@ export interface FullSyncOptions {
   includeScan?: boolean;
   includeShadow?: boolean;
   includePerformance?: boolean;
+  includeWalkForward?: boolean;
 }
 
 export async function runFullSync(options: FullSyncOptions = {}) {
@@ -22,6 +24,7 @@ export async function runFullSync(options: FullSyncOptions = {}) {
     includeScan = true,
     includeShadow = true,
     includePerformance = true,
+    includeWalkForward = false,
   } = options;
 
   const db = getDb();
@@ -45,6 +48,7 @@ export async function runFullSync(options: FullSyncOptions = {}) {
       includeScan,
       includeShadow,
       includePerformance,
+      includeWalkForward,
       ownerId: settings.ownerId,
     });
 
@@ -62,6 +66,10 @@ export async function runFullSync(options: FullSyncOptions = {}) {
 
     if (includePerformance) {
       results.performance = await aggregatePerformanceJob();
+    }
+
+    if (includeWalkForward) {
+      results.walkForward = await runWalkForwardJob();
     }
 
     await db.collection("marketState").doc("localSync").set(

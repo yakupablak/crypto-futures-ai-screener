@@ -41,22 +41,26 @@ export function SyncActions() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
         <Button disabled={isPending} onClick={() => runSync("FULL")}>
-          {isPending ? "Calisiyor..." : "Full Sync"}
+          {isPending ? "Calisiyor..." : "Full sync"}
         </Button>
         <Button disabled={isPending} variant="secondary" onClick={() => runSync("SCAN")}>
-          Sadece Scan
+          Sadece scan
         </Button>
         <Button disabled={isPending} variant="ghost" onClick={() => runSync("UNIVERSE")}>
-          Universe Refresh
+          Universe refresh
         </Button>
       </div>
-      <p className="text-sm text-muted">
+      <p className="text-sm leading-6 text-muted">
         Lokal worker zaten periyodik calisir. Bu butonlar anlik manuel tetikleme icindir.
       </p>
-      {message ? <p className="text-sm text-accent">{message}</p> : null}
+      {message ? (
+        <p className="rounded-[18px] border border-accent/20 bg-accent/10 px-3 py-2 text-sm text-accent">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }

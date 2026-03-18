@@ -2,12 +2,14 @@ import type {
   IndicatorDefinition,
   IndicatorProposal,
   MarketUniverseEntry,
+  PerformanceSnapshot,
   ScanRun,
   SignalCandidate,
   SignalSnapshot,
   TradeJournalEntry,
   TradeReviewReport,
   UserSettings,
+  WalkForwardSummary,
 } from "@crypto-futures/shared";
 
 import { getDb } from "./admin";
@@ -20,6 +22,25 @@ function sortByDateDesc<T>(items: T[], selector: (item: T) => string | null | un
     const leftValue = selector(left) ? new Date(selector(left) as string).getTime() : 0;
     const rightValue = selector(right) ? new Date(selector(right) as string).getTime() : 0;
     return rightValue - leftValue;
+  });
+}
+
+function sortUniverse(entries: MarketUniverseEntry[]) {
+  const sourceWeight: Record<MarketUniverseEntry["source"], number> = {
+    TOP_200: 0,
+    WHITELIST: 1,
+  };
+
+  return [...entries].sort((left, right) => {
+    if (sourceWeight[left.source] !== sourceWeight[right.source]) {
+      return sourceWeight[left.source] - sourceWeight[right.source];
+    }
+
+    if (left.marketCapRank !== right.marketCapRank) {
+      return left.marketCapRank - right.marketCapRank;
+    }
+
+    return left.symbol.localeCompare(right.symbol);
   });
 }
 
@@ -46,9 +67,11 @@ export async function getSettings(): Promise<UserSettings> {
 export async function listMarketUniverse(): Promise<MarketUniverseEntry[]> {
   const db = getDb();
   const snapshot = await db.collection("marketUniverse").get();
-  return snapshot.docs
-    .map((doc) => doc.data() as MarketUniverseEntry)
-    .filter((entry) => entry.ownerId === config.ownerId && entry.active);
+  return sortUniverse(
+    snapshot.docs
+      .map((doc) => doc.data() as MarketUniverseEntry)
+      .filter((entry) => entry.ownerId === config.ownerId && entry.active),
+  );
 }
 
 export async function replaceMarketUniverse(entries: MarketUniverseEntry[]) {
@@ -60,7 +83,7 @@ export async function replaceMarketUniverse(entries: MarketUniverseEntry[]) {
 
   const batch = db.batch();
   existing.docs.forEach((doc) => batch.delete(doc.ref));
-  entries.forEach((entry) => batch.set(db.collection("marketUniverse").doc(entry.id), entry));
+  sortUniverse(entries).forEach((entry) => batch.set(db.collection("marketUniverse").doc(entry.id), entry));
   await batch.commit();
 }
 
@@ -69,7 +92,40 @@ export async function listIndicators(): Promise<IndicatorDefinition[]> {
   const snapshot = await db.collection("indicatorCatalog").get();
   return snapshot.docs
     .map((doc) => doc.data() as IndicatorDefinition)
-    .filter((indicator) => indicator.ownerId === config.ownerId);
+    .filter((indicator) => indicator.ownerId === config.ownerId)
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+export async function getPerformanceSnapshot() {
+  const db = getDb();
+  const snapshot = await db.collection("marketState").doc("performance").get();
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const data = snapshot.data() as PerformanceSnapshot;
+  return data.ownerId === config.ownerId ? data : null;
+}
+
+export async function savePerformanceSnapshot(snapshot: PerformanceSnapshot) {
+  const db = getDb();
+  await db.collection("marketState").doc("performance").set(snapshot);
+}
+
+export async function getWalkForwardSummary() {
+  const db = getDb();
+  const snapshot = await db.collection("marketState").doc("walkForward").get();
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const data = snapshot.data() as WalkForwardSummary;
+  return data.ownerId === config.ownerId ? data : null;
+}
+
+export async function saveWalkForwardSummary(summary: WalkForwardSummary) {
+  const db = getDb();
+  await db.collection("marketState").doc("walkForward").set(summary);
 }
 
 export async function listClosedTrades(limit = 50): Promise<TradeJournalEntry[]> {

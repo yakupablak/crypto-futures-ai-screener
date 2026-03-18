@@ -25,6 +25,9 @@ import {
   volumeRatio,
 } from "./indicators";
 
+const MIN_DAILY_CANDLES = 220;
+const MIN_FOUR_HOUR_CANDLES = 220;
+
 export interface MarketSymbolInput {
   ownerId: string;
   symbol: string;
@@ -39,7 +42,8 @@ export type AnalysisRejectionReason =
   | "TREND_NEUTRAL"
   | "RSI_FILTER"
   | "NO_SETUP"
-  | "INVALID_TARGET";
+  | "INVALID_TARGET"
+  | "INSUFFICIENT_DATA";
 
 interface SetupResult {
   setup: SetupType;
@@ -47,6 +51,23 @@ interface SetupResult {
   entry: number;
   stop: number;
   reasons: string[];
+}
+
+interface TechnicalSnapshotInternal {
+  dailyClose: number;
+  dailyEma200: number;
+  fourHourClose: number;
+  fourHourEma200: number;
+  rsi: number;
+  previousRsi: number | null;
+  bollingerUpper: number;
+  bollingerMiddle: number;
+  bollingerLower: number;
+  volumeRatio: number;
+  atr: number;
+  bbWidth: number;
+  dailyDistanceToEmaPct: number;
+  fourHourDistanceToEmaPct: number;
 }
 
 export interface MarketAnalysisResult {
@@ -60,29 +81,53 @@ function isNear(value: number, reference: number, tolerancePct = 0.01) {
   return Math.abs(value - reference) / reference <= tolerancePct;
 }
 
+function average(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function calculateOpenInterestTrendPct(openInterestHistory: OpenInterestPoint[]) {
+  if (openInterestHistory.length < 2) {
+    return null;
+  }
+
+  const deltas: number[] = [];
+  for (let index = 1; index < openInterestHistory.length; index += 1) {
+    const previous = openInterestHistory[index - 1].sumOpenInterestValue;
+    const current = openInterestHistory[index].sumOpenInterestValue;
+    deltas.push(percentChange(current, previous));
+  }
+
+  return Number(average(deltas.slice(-3)).toFixed(2));
+}
+
 function calculateMarketMetrics(
   fundingHistory: FundingSnapshot[] = [],
   openInterestHistory: OpenInterestPoint[] = [],
+  isCompressed = false,
 ): MarketMetrics {
   const latestFunding = fundingHistory[fundingHistory.length - 1]?.fundingRate ?? null;
-  let openInterestTrendPct: number | null = null;
-
-  if (openInterestHistory.length >= 2) {
-    const previous = openInterestHistory[openInterestHistory.length - 2].sumOpenInterestValue;
-    const current = openInterestHistory[openInterestHistory.length - 1].sumOpenInterestValue;
-    openInterestTrendPct = percentChange(current, previous);
-  }
+  const recentFundingAverage =
+    fundingHistory.length > 0
+      ? average(fundingHistory.slice(-3).map((item) => item.fundingRate))
+      : null;
+  const openInterestTrendPct = calculateOpenInterestTrendPct(openInterestHistory);
 
   const squeezeBias =
-    latestFunding != null &&
-    latestFunding < 0 &&
+    isCompressed &&
+    recentFundingAverage != null &&
+    recentFundingAverage < 0 &&
     openInterestTrendPct != null &&
     openInterestTrendPct > 1
       ? "HIGH_SHORT_SQUEEZE"
-      : latestFunding != null &&
-          latestFunding > 0 &&
-          openInterestTrendPct != null &&
-          openInterestTrendPct > 1
+      : isCompressed &&
+            recentFundingAverage != null &&
+            recentFundingAverage > 0 &&
+            openInterestTrendPct != null &&
+            openInterestTrendPct > 1
         ? "HIGH_LONG_SQUEEZE"
         : "NEUTRAL";
 
@@ -91,6 +136,13 @@ function calculateMarketMetrics(
     openInterestTrendPct,
     squeezeBias,
   };
+}
+
+function hasSufficientHistory(dailyCandles: Candle[], fourHourCandles: Candle[]) {
+  return (
+    dailyCandles.length >= MIN_DAILY_CANDLES &&
+    fourHourCandles.length >= MIN_FOUR_HOUR_CANDLES
+  );
 }
 
 function detectTrend(
@@ -105,14 +157,11 @@ function detectTrend(
   const dailyClose = last(dailyCloses);
   const fourHourClose = last(fourHourCloses);
 
-  if (
-    isNear(dailyClose, dailyEma, 0.008) ||
-    isNear(fourHourClose, fourHourEma, 0.008)
-  ) {
+  if (isNear(dailyClose, dailyEma, 0.008) || isNear(fourHourClose, fourHourEma, 0.008)) {
     return {
       trend: "NEUTRAL",
       side: null,
-      notes: ["Fiyat EMA200 çevresinde, filtre gereği elendi."],
+      notes: ["Fiyat EMA200 cevresinde kaldigi icin filtre disi birakildi."],
     };
   }
 
@@ -120,7 +169,7 @@ function detectTrend(
     return {
       trend: "LONG",
       side: "LONG",
-      notes: ["1D ve 4H EMA200 üstünde trend uyumu mevcut."],
+      notes: ["1D ve 4H EMA200 uzerinde trend uyumu mevcut."],
     };
   }
 
@@ -128,41 +177,71 @@ function detectTrend(
     return {
       trend: "SHORT",
       side: "SHORT",
-      notes: ["1D ve 4H EMA200 altında trend uyumu mevcut."],
+      notes: ["1D ve 4H EMA200 altinda trend uyumu mevcut."],
     };
   }
 
   return {
     trend: "NEUTRAL",
     side: null,
-    notes: ["1D ve 4H trend yönü uyumsuz."],
+    notes: ["1D ve 4H trend yonu uyumsuz oldugu icin elendi."],
   };
 }
 
-function buildTechnicalSnapshot(dailyCandles: Candle[], fourHourCandles: Candle[]) {
+function buildTechnicalSnapshot(dailyCandles: Candle[], fourHourCandles: Candle[]): TechnicalSnapshotInternal {
   const dailyCloses = closes(dailyCandles);
   const fourHourCloses = closes(fourHourCandles);
   const fourHourBands = bollingerBands(fourHourCloses, 20);
+  const rsiSeries = rsi(fourHourCloses, 14);
+
+  const dailyClose = last(dailyCloses);
+  const dailyEma200 = last(ema(dailyCloses, 200));
+  const fourHourClose = last(fourHourCloses);
+  const fourHourEma200 = last(ema(fourHourCloses, 200));
 
   return {
-    dailyClose: last(dailyCloses),
-    dailyEma200: last(ema(dailyCloses, 200)),
-    fourHourClose: last(fourHourCloses),
-    fourHourEma200: last(ema(fourHourCloses, 200)),
-    rsi: last(rsi(fourHourCloses, 14)),
+    dailyClose,
+    dailyEma200,
+    fourHourClose,
+    fourHourEma200,
+    rsi: last(rsiSeries),
+    previousRsi: rsiSeries.length > 1 ? rsiSeries[rsiSeries.length - 2] : null,
     bollingerUpper: last(fourHourBands).upper,
     bollingerMiddle: last(fourHourBands).middle,
     bollingerLower: last(fourHourBands).lower,
     volumeRatio: volumeRatio(fourHourCandles, 20),
     atr: last(atr(fourHourCandles, 14)),
     bbWidth: last(fourHourBands).width,
+    dailyDistanceToEmaPct: Math.abs(dailyClose - dailyEma200) / dailyEma200,
+    fourHourDistanceToEmaPct: Math.abs(fourHourClose - fourHourEma200) / fourHourEma200,
   };
+}
+
+function volumeRatioForOffset(candles: Candle[], offsetFromEnd: number, period = 20) {
+  const targetIndex = candles.length - 1 - offsetFromEnd;
+  const baselineStart = targetIndex - period;
+
+  if (targetIndex < 0 || baselineStart < 0) {
+    return 1;
+  }
+
+  const baseline = candles.slice(baselineStart, targetIndex).map((candle) => candle.volume);
+  if (baseline.length < period) {
+    return 1;
+  }
+
+  const baselineAverage = average(baseline);
+  if (!Number.isFinite(baselineAverage) || baselineAverage === 0) {
+    return 1;
+  }
+
+  return candles[targetIndex].volume / baselineAverage;
 }
 
 function detectBreakoutRetest(
   side: TradeSide,
   fourHourCandles: Candle[],
-  technicalSnapshot: ReturnType<typeof buildTechnicalSnapshot>,
+  technicalSnapshot: TechnicalSnapshotInternal,
 ): SetupResult | null {
   const candleHighs = fourHourCandles.map((candle) => candle.high);
   const candleLows = fourHourCandles.map((candle) => candle.low);
@@ -170,39 +249,47 @@ function detectBreakoutRetest(
   const recentSupport = last(lowest(candleLows.slice(0, -2), 20));
   const latest = fourHourCandles[fourHourCandles.length - 1];
   const previous = fourHourCandles[fourHourCandles.length - 2];
+  const breakoutVolumeRatio = volumeRatioForOffset(fourHourCandles, 1, 20);
 
   if (side === "LONG") {
-    const breakout = previous.close > recentResistance;
-    const retestHold = latest.low <= recentResistance * 1.005 && latest.close >= recentResistance;
-    if (breakout && retestHold && technicalSnapshot.volumeRatio > 1.2) {
+    const breakout = previous.close > recentResistance && breakoutVolumeRatio > 1.2;
+    const retestHold =
+      latest.low <= recentResistance * 1.005 &&
+      latest.close >= recentResistance &&
+      latest.close >= latest.open * 0.995;
+
+    if (breakout && retestHold) {
       return {
         setup: "BREAKOUT_RETEST",
         baseScore: 33,
         entry: latest.close,
         stop: Math.min(latest.low, recentResistance) - technicalSnapshot.atr * 0.35,
         reasons: [
-          "Direnç kırılımı sonrası retest görülüyor.",
-          "Retest bölgesinde tutunma mevcut.",
-          "Breakout hacim teyidi var.",
+          "Direnc kirilimi sonrasi retest yapildi.",
+          "Retest bolgesinde tutunma devam ediyor.",
+          "Kirilim mumu hacimle teyit edildi.",
         ],
       };
     }
   }
 
   if (side === "SHORT") {
-    const breakdown = previous.close < recentSupport;
+    const breakdown = previous.close < recentSupport && breakoutVolumeRatio > 1.2;
     const retestReject =
-      latest.high >= recentSupport * 0.995 && latest.close <= recentSupport;
-    if (breakdown && retestReject && technicalSnapshot.volumeRatio > 1.2) {
+      latest.high >= recentSupport * 0.995 &&
+      latest.close <= recentSupport &&
+      latest.close <= latest.open * 1.005;
+
+    if (breakdown && retestReject) {
       return {
         setup: "BREAKOUT_RETEST",
         baseScore: 33,
         entry: latest.close,
         stop: Math.max(latest.high, recentSupport) + technicalSnapshot.atr * 0.35,
         reasons: [
-          "Destek kaybı sonrası retest reddi mevcut.",
-          "Retest bölgesinde satıcı baskısı sürüyor.",
-          "Breakdown hacim teyidi var.",
+          "Destek kaybi sonrasi retest reddi goruluyor.",
+          "Retest bolgesinde satici baskisi suruyor.",
+          "Kirilan seviye hacimle teyit edildi.",
         ],
       };
     }
@@ -214,47 +301,54 @@ function detectBreakoutRetest(
 function detectSupportBounce(
   side: TradeSide,
   fourHourCandles: Candle[],
-  technicalSnapshot: ReturnType<typeof buildTechnicalSnapshot>,
+  technicalSnapshot: TechnicalSnapshotInternal,
 ): SetupResult | null {
   const latest = fourHourCandles[fourHourCandles.length - 1];
   const recentSwingLow = Math.min(...fourHourCandles.slice(-12).map((candle) => candle.low));
   const recentSwingHigh = Math.max(...fourHourCandles.slice(-12).map((candle) => candle.high));
 
-  if (
-    side === "LONG" &&
-    technicalSnapshot.rsi >= 40 &&
-    technicalSnapshot.rsi <= 55 &&
-    (latest.low <= technicalSnapshot.bollingerLower * 1.01 ||
-      latest.close >= technicalSnapshot.bollingerMiddle)
-  ) {
-    return {
-      setup: "SUPPORT_BOUNCE",
-      baseScore: 28,
-      entry: latest.close,
-      stop: recentSwingLow - technicalSnapshot.atr * 0.25,
-      reasons: [
-        "Bollinger lower band bounce veya middle band support mevcut.",
-        "RSI 40-55 bandında toparlanma görülüyor.",
-      ],
-    };
+  if (side === "LONG") {
+    const lowerBandBounce =
+      latest.low <= technicalSnapshot.bollingerLower * 1.01 && latest.close > latest.open;
+    const middleBandSupport =
+      latest.low <= technicalSnapshot.bollingerMiddle * 1.008 &&
+      latest.close >= technicalSnapshot.bollingerMiddle &&
+      latest.close >= latest.open;
+
+    if (lowerBandBounce || middleBandSupport) {
+      return {
+        setup: "SUPPORT_BOUNCE",
+        baseScore: 28,
+        entry: latest.close,
+        stop: recentSwingLow - technicalSnapshot.atr * 0.25,
+        reasons: [
+          lowerBandBounce
+            ? "Lower band bounce ile destekten tepki alindi."
+            : "Middle band support ile tutunma saglandi.",
+          "RSI long bounce veya 50 kirilimi ile uyumlu.",
+        ],
+      };
+    }
   }
 
-  if (
-    side === "SHORT" &&
-    technicalSnapshot.rsi >= 60 &&
-    technicalSnapshot.rsi <= 70 &&
-    latest.high >= technicalSnapshot.bollingerUpper * 0.99
-  ) {
-    return {
-      setup: "SUPPORT_BOUNCE",
-      baseScore: 28,
-      entry: latest.close,
-      stop: recentSwingHigh + technicalSnapshot.atr * 0.25,
-      reasons: [
-        "Upper band rejection mevcut.",
-        "RSI 60-70 bandında rejection görülüyor.",
-      ],
-    };
+  if (side === "SHORT") {
+    const upperBandReject =
+      latest.high >= technicalSnapshot.bollingerUpper * 0.99 &&
+      latest.close <= technicalSnapshot.bollingerUpper &&
+      latest.close < latest.open;
+
+    if (upperBandReject) {
+      return {
+        setup: "SUPPORT_BOUNCE",
+        baseScore: 28,
+        entry: latest.close,
+        stop: recentSwingHigh + technicalSnapshot.atr * 0.25,
+        reasons: [
+          "Upper band rejection ile satis baskisi teyit edildi.",
+          "RSI 60-70 bolgesinde rejection davranisi goruluyor.",
+        ],
+      };
+    }
   }
 
   return null;
@@ -263,7 +357,7 @@ function detectSupportBounce(
 function detectConsolidationBreakout(
   side: TradeSide,
   fourHourCandles: Candle[],
-  technicalSnapshot: ReturnType<typeof buildTechnicalSnapshot>,
+  technicalSnapshot: TechnicalSnapshotInternal,
 ): SetupResult | null {
   const rangeCandles = fourHourCandles.slice(-13, -1);
   const latest = fourHourCandles[fourHourCandles.length - 1];
@@ -282,9 +376,9 @@ function detectConsolidationBreakout(
       entry: latest.close,
       stop: rangeLow - technicalSnapshot.atr * 0.2,
       reasons: [
-        "Yatay sıkışma sonrası yukarı breakout.",
-        "Dar Bollinger genişlemeye başladı.",
-        "Breakout hacim destekli.",
+        "Yatay sikisma sonrasi yukari breakout goruluyor.",
+        "Daralan Bollinger yapisi genislemeye basladi.",
+        "Breakout hacimle desteklendi.",
       ],
     };
   }
@@ -296,9 +390,9 @@ function detectConsolidationBreakout(
       entry: latest.close,
       stop: rangeHigh + technicalSnapshot.atr * 0.2,
       reasons: [
-        "Yatay sıkışma sonrası aşağı breakout.",
-        "Dar Bollinger genişlemeye başladı.",
-        "Breakdown hacim destekli.",
+        "Yatay sikisma sonrasi asagi breakout goruluyor.",
+        "Daralan Bollinger yapisi genislemeye basladi.",
+        "Breakdown hacimle desteklendi.",
       ],
     };
   }
@@ -309,7 +403,7 @@ function detectConsolidationBreakout(
 function detectSetup(
   side: TradeSide,
   fourHourCandles: Candle[],
-  technicalSnapshot: ReturnType<typeof buildTechnicalSnapshot>,
+  technicalSnapshot: TechnicalSnapshotInternal,
 ) {
   return (
     detectBreakoutRetest(side, fourHourCandles, technicalSnapshot) ??
@@ -337,23 +431,27 @@ function buildTargets(side: TradeSide, entry: number, stop: number) {
       };
 }
 
-function evaluateRsiPenalty(side: TradeSide, rsiValue: number) {
+function evaluateRsiValidation(side: TradeSide, rsiValue: number, previousRsi: number | null) {
   if (rsiValue > 80 || rsiValue < 20) {
-    return { allowed: false, notes: ["RSI ekstrem bölgede olduğu için elendi."] };
+    return { allowed: false, notes: ["RSI ekstrem bolgede oldugu icin sinyal elendi."] };
   }
 
   if (side === "LONG") {
-    const allowed = (rsiValue >= 40 && rsiValue <= 55) || rsiValue >= 50;
+    const bounce = rsiValue >= 40 && rsiValue <= 55 && previousRsi != null && rsiValue >= previousRsi;
+    const crossAbove50 = previousRsi != null && previousRsi < 50 && rsiValue >= 50;
+
     return {
-      allowed,
-      notes: allowed ? [] : ["LONG için RSI bounce/breakout teyidi yetersiz."],
+      allowed: bounce || crossAbove50,
+      notes: bounce || crossAbove50 ? [] : ["LONG icin RSI bounce veya 50 kirilimi teyit edilmedi."],
     };
   }
 
-  const allowed = rsiValue >= 60 && rsiValue <= 70;
+  const rejection =
+    rsiValue >= 60 && rsiValue <= 70 && previousRsi != null && rsiValue <= previousRsi;
+
   return {
-    allowed,
-    notes: allowed ? [] : ["SHORT için RSI rejection bölgesi teyit edilmedi."],
+    allowed: rejection,
+    notes: rejection ? [] : ["SHORT icin RSI rejection bolgesi teyit edilmedi."],
   };
 }
 
@@ -361,6 +459,15 @@ export function analyzeMarketSymbolDetailed(
   input: MarketSymbolInput,
   indicatorCatalog: IndicatorDefinition[] = [],
 ): MarketAnalysisResult {
+  if (!hasSufficientHistory(input.dailyCandles, input.fourHourCandles)) {
+    return {
+      symbol: input.symbol,
+      coinName: input.coinName,
+      candidate: null,
+      rejectionReason: "INSUFFICIENT_DATA",
+    };
+  }
+
   const trend = detectTrend(input.dailyCandles, input.fourHourCandles);
   if (trend.side == null) {
     return {
@@ -372,7 +479,11 @@ export function analyzeMarketSymbolDetailed(
   }
 
   const technicalSnapshot = buildTechnicalSnapshot(input.dailyCandles, input.fourHourCandles);
-  const rsiValidation = evaluateRsiPenalty(trend.side, technicalSnapshot.rsi);
+  const rsiValidation = evaluateRsiValidation(
+    trend.side,
+    technicalSnapshot.rsi,
+    technicalSnapshot.previousRsi,
+  );
   if (!rsiValidation.allowed) {
     return {
       symbol: input.symbol,
@@ -405,38 +516,43 @@ export function analyzeMarketSymbolDetailed(
   const marketMetrics = calculateMarketMetrics(
     input.fundingHistory,
     input.openInterestHistory,
+    technicalSnapshot.bbWidth < 0.05,
   );
 
   let score = setup.baseScore;
-  const reasons = [...trend.notes, ...setup.reasons];
+  const reasons = [...trend.notes, ...setup.reasons, ...rsiValidation.notes];
   const penalties: string[] = [];
   const bonuses: string[] = [];
 
   score += trend.side === "LONG" ? 18 : 17;
-  score += Math.min(12, technicalSnapshot.volumeRatio * 4);
-
-  if (marketMetrics.latestFundingRate != null && marketMetrics.latestFundingRate < 0 && trend.side === "LONG") {
-    score += 6;
-    bonuses.push("Negatif funding long squeeze lehine.");
-  }
+  score += Math.min(10, Math.max(0, (technicalSnapshot.volumeRatio - 1) * 10));
 
   if (
-    marketMetrics.openInterestTrendPct != null &&
-    marketMetrics.openInterestTrendPct > 1 &&
-    technicalSnapshot.bbWidth < 0.05
+    technicalSnapshot.dailyDistanceToEmaPct < 0.015 ||
+    technicalSnapshot.fourHourDistanceToEmaPct < 0.015
   ) {
-    score += 5;
-    bonuses.push("Artan open interest sıkışma bonusu verdi.");
+    score -= 4;
+    penalties.push("Fiyat EMA200 bolgesine gore fazla yakin.");
   }
 
-  if (technicalSnapshot.volumeRatio < 1.15 && setup.setup !== "SUPPORT_BOUNCE") {
+  if (marketMetrics.squeezeBias === "HIGH_SHORT_SQUEEZE" && trend.side === "LONG") {
+    score += 6;
+    bonuses.push("Negatif funding ve artan OI short squeeze lehine.");
+  }
+
+  if (marketMetrics.squeezeBias === "HIGH_LONG_SQUEEZE" && trend.side === "SHORT") {
+    score += 6;
+    bonuses.push("Pozitif funding ve artan OI crowded-long baskisi olusturuyor.");
+  }
+
+  if (setup.setup !== "SUPPORT_BOUNCE" && technicalSnapshot.volumeRatio < 1.15) {
     score -= 8;
-    penalties.push("Breakout yapısı için hacim zayıf.");
+    penalties.push("Breakout yapisi icin hacim zayif kaldi.");
   }
 
   if (Math.abs(setup.entry - setup.stop) / setup.entry > 0.06) {
     score -= 6;
-    penalties.push("Stop mesafesi geniş.");
+    penalties.push("Stop mesafesi genis, verimlilik dusuyor.");
   }
 
   const dynamicIndicatorHits = indicatorCatalog
@@ -465,10 +581,14 @@ export function analyzeMarketSymbolDetailed(
 
   reasons.push(...bonuses);
 
+  const confidenceBase = 0.54 + Math.min(0.28, score / 220);
+  const confidencePenalty = penalties.length * 0.03;
+  const confidence = Math.min(0.95, Math.max(0.3, confidenceBase - confidencePenalty));
+
   const summary =
     trend.side === "LONG"
-      ? `${input.symbol} için ${setup.setup} yapısı long yönünde öne çıkıyor. Trend EMA200 üzerinde ve risk/ödül dengesi uygun.`
-      : `${input.symbol} için ${setup.setup} yapısı short yönünde öne çıkıyor. Trend EMA200 altında ve risk/ödül dengesi uygun.`;
+      ? `${input.symbol} icin ${setup.setup} yapisi long yone egiliyor. Trend EMA200 uzerinde, RSI teyidi mevcut ve risk/odul dengesi islenebilir durumda.`
+      : `${input.symbol} icin ${setup.setup} yapisi short yone egiliyor. Trend EMA200 altinda, RSI rejection teyidi mevcut ve risk/odul dengesi islenebilir durumda.`;
 
   return {
     symbol: input.symbol,
@@ -488,7 +608,7 @@ export function analyzeMarketSymbolDetailed(
       tp2: Number(targets.tp2.toFixed(6)),
       riskReward: Number(targets.riskReward.toFixed(2)),
       score: Number(score.toFixed(2)),
-      confidence: Number(Math.min(0.95, 0.55 + score / 200).toFixed(2)),
+      confidence: Number(confidence.toFixed(2)),
       summary,
       reasons,
       createdAt: new Date().toISOString(),
@@ -519,6 +639,10 @@ export function rankSignals(
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
+      }
+
+      if (right.confidence !== left.confidence) {
+        return right.confidence - left.confidence;
       }
 
       if (right.riskReward !== left.riskReward) {

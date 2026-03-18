@@ -24,6 +24,7 @@ export async function POST(request: Request) {
             includeScan: false,
             includeShadow: false,
             includePerformance: false,
+            includeWalkForward: false,
           })
         : payload.mode === "SCAN"
           ? await runFullSync({
@@ -31,8 +32,15 @@ export async function POST(request: Request) {
               includeScan: true,
               includeShadow: true,
               includePerformance: true,
+              includeWalkForward: false,
             })
-          : await runFullSync();
+          : await runFullSync({
+              includeUniverse: true,
+              includeScan: true,
+              includeShadow: true,
+              includePerformance: true,
+              includeWalkForward: true,
+            });
 
     const scan = "scan" in result ? (result.scan as Record<string, unknown>) : null;
     if (scan && Number(scan.candidateCount ?? 0) === 0) {

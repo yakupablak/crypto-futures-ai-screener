@@ -79,12 +79,17 @@ export function rsi(values: number[], period = 14) {
     losses.push(Math.max(-delta, 0));
   }
 
-  let averageGain =
-    gains.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
-  let averageLoss =
-    losses.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
+  let averageGain = gains.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
+  let averageLoss = losses.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
 
   const result: number[] = [];
+  if (averageLoss === 0) {
+    result.push(100);
+  } else {
+    const rs = averageGain / averageLoss;
+    result.push(100 - 100 / (1 + rs));
+  }
+
   for (let index = period; index < gains.length; index += 1) {
     averageGain = (averageGain * (period - 1) + gains[index]) / period;
     averageLoss = (averageLoss * (period - 1) + losses[index]) / period;
@@ -131,7 +136,15 @@ export function atr(candles: Candle[], period = 14) {
     );
   }
 
-  return sma(trueRanges, period);
+  const initialAtr = trueRanges.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
+  const result = [initialAtr];
+
+  for (let index = period; index < trueRanges.length; index += 1) {
+    const nextAtr = (result[result.length - 1] * (period - 1) + trueRanges[index]) / period;
+    result.push(nextAtr);
+  }
+
+  return result;
 }
 
 export function highest(values: number[], period: number) {
@@ -167,11 +180,18 @@ export function percentChange(current: number, previous: number) {
 }
 
 export function volumeRatio(candles: Candle[], period = 20) {
-  const candleVolumes = volumes(candles);
-  const averageVolumes = sma(candleVolumes, period);
-  if (averageVolumes.length === 0) {
+  if (candles.length <= period) {
     return 1;
   }
 
-  return last(candleVolumes) / last(averageVolumes);
+  const candleVolumes = volumes(candles);
+  const latestVolume = last(candleVolumes);
+  const baselineSlice = candleVolumes.slice(-(period + 1), -1);
+  const baselineAverage = baselineSlice.reduce((sum, value) => sum + value, 0) / baselineSlice.length;
+
+  if (!Number.isFinite(baselineAverage) || baselineAverage === 0) {
+    return 1;
+  }
+
+  return latestVolume / baselineAverage;
 }

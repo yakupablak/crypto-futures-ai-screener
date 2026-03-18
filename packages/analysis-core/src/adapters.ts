@@ -2,6 +2,10 @@ import { createLogger, type Candle, type FundingSnapshot, type OpenInterestPoint
 
 const BINANCE_BASE_URL = "https://fapi.binance.com";
 const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
+const SLOW_REQUEST_DEBUG_MS = 1500;
+const SLOW_REQUEST_WARN_MS = 5000;
+const REQUEST_TIMEOUT_MS = 15000;
+const MAX_RETRY_ATTEMPTS = 2;
 const logger = createLogger("marketAdapters");
 
 type LoggedError = Error & { alreadyLogged?: boolean };
@@ -21,12 +25,109 @@ export interface BinanceExchangeSymbol {
   baseAsset: string;
 }
 
+function isRetryableStatus(status: number) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function isRetryableError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.name === "AbortError" || error.name === "TypeError";
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sanitizeCandles(candles: Candle[]) {
+  const now = Date.now();
+  const deduped = new Map<number, Candle>();
+
+  for (const candle of candles) {
+    const numericValues = [
+      candle.openTime,
+      candle.closeTime,
+      candle.open,
+      candle.high,
+      candle.low,
+      candle.close,
+      candle.volume,
+    ];
+
+    if (numericValues.some((value) => !Number.isFinite(value))) {
+      continue;
+    }
+
+    if (
+      candle.open <= 0 ||
+      candle.high <= 0 ||
+      candle.low <= 0 ||
+      candle.close <= 0 ||
+      candle.volume < 0
+    ) {
+      continue;
+    }
+
+    if (candle.closeTime > now) {
+      continue;
+    }
+
+    if (
+      candle.high < Math.max(candle.open, candle.close, candle.low) ||
+      candle.low > Math.min(candle.open, candle.close, candle.high)
+    ) {
+      continue;
+    }
+
+    deduped.set(candle.openTime, candle);
+  }
+
+  return [...deduped.values()].sort((left, right) => left.openTime - right.openTime);
+}
+
+function sanitizeFundingHistory(history: FundingSnapshot[]) {
+  const deduped = new Map<string, FundingSnapshot>();
+
+  for (const point of history) {
+    if (!Number.isFinite(point.fundingRate)) {
+      continue;
+    }
+
+    deduped.set(point.fundingTime, point);
+  }
+
+  return [...deduped.values()].sort(
+    (left, right) =>
+      new Date(left.fundingTime).getTime() - new Date(right.fundingTime).getTime(),
+  );
+}
+
+function sanitizeOpenInterestHistory(history: OpenInterestPoint[]) {
+  const deduped = new Map<string, OpenInterestPoint>();
+
+  for (const point of history) {
+    if (
+      !Number.isFinite(point.sumOpenInterest) ||
+      !Number.isFinite(point.sumOpenInterestValue)
+    ) {
+      continue;
+    }
+
+    deduped.set(point.timestamp, point);
+  }
+
+  return [...deduped.values()].sort(
+    (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+  );
+}
+
 async function fetchJson<T>(
   label: string,
   url: string | URL,
   init?: RequestInit,
 ): Promise<T> {
-  const startedAt = Date.now();
   const requestUrl = typeof url === "string" ? url : url.toString();
   logger.debug("External request started", {
     label,
@@ -34,51 +135,102 @@ async function fetchJson<T>(
     url: requestUrl,
   });
 
-  try {
-    const response = await fetch(url, init);
-    const durationMs = Date.now() - startedAt;
+  for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt += 1) {
+    const startedAt = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      const error = new Error(`${label} failed: ${response.status}`) as LoggedError;
-      error.alreadyLogged = true;
-      logger.error("External request failed", {
-        label,
-        url: requestUrl,
-        status: response.status,
-        statusText: response.statusText,
-        durationMs,
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
+      const durationMs = Date.now() - startedAt;
+
+      if (!response.ok) {
+        if (attempt < MAX_RETRY_ATTEMPTS && isRetryableStatus(response.status)) {
+          logger.warn("External request will retry after non-ok response", {
+            label,
+            url: requestUrl,
+            status: response.status,
+            attempt: attempt + 1,
+            maxAttempts: MAX_RETRY_ATTEMPTS + 1,
+            durationMs,
+          });
+          await wait(250 * (attempt + 1));
+          continue;
+        }
+
+        const error = new Error(`${label} failed: ${response.status}`) as LoggedError;
+        error.alreadyLogged = true;
+        logger.error("External request failed", {
+          label,
+          url: requestUrl,
+          status: response.status,
+          statusText: response.statusText,
+          durationMs,
+        });
+        throw error;
+      }
+
+      if (durationMs >= SLOW_REQUEST_WARN_MS) {
+        logger.warn("External request completed slowly", {
+          label,
+          url: requestUrl,
+          status: response.status,
+          durationMs,
+          attempt: attempt + 1,
+        });
+      } else if (durationMs >= SLOW_REQUEST_DEBUG_MS) {
+        logger.debug("External request completed slower than baseline", {
+          label,
+          url: requestUrl,
+          status: response.status,
+          durationMs,
+          attempt: attempt + 1,
+        });
+      } else {
+        logger.debug("External request completed", {
+          label,
+          url: requestUrl,
+          status: response.status,
+          durationMs,
+          attempt: attempt + 1,
+        });
+      }
+
+      return (await response.json()) as T;
+    } catch (error) {
+      clearTimeout(timeout);
+
+      if (attempt < MAX_RETRY_ATTEMPTS && isRetryableError(error)) {
+        logger.warn("External request will retry after thrown error", {
+          label,
+          url: requestUrl,
+          attempt: attempt + 1,
+          maxAttempts: MAX_RETRY_ATTEMPTS + 1,
+          durationMs: Date.now() - startedAt,
+          error,
+        });
+        await wait(250 * (attempt + 1));
+        continue;
+      }
+
+      if (!(error instanceof Error && (error as LoggedError).alreadyLogged)) {
+        logger.error("External request threw", {
+          label,
+          url: requestUrl,
+          durationMs: Date.now() - startedAt,
+          error,
+        });
+      }
       throw error;
     }
-
-    if (durationMs >= 1500) {
-      logger.warn("External request completed slowly", {
-        label,
-        url: requestUrl,
-        status: response.status,
-        durationMs,
-      });
-    } else {
-      logger.debug("External request completed", {
-        label,
-        url: requestUrl,
-        status: response.status,
-        durationMs,
-      });
-    }
-
-    return (await response.json()) as T;
-  } catch (error) {
-    if (!(error instanceof Error && (error as LoggedError).alreadyLogged)) {
-      logger.error("External request threw", {
-        label,
-        url: requestUrl,
-        durationMs: Date.now() - startedAt,
-        error,
-      });
-    }
-    throw error;
   }
+
+  throw new Error(`${label} exhausted retries`);
 }
 
 export async function fetchTopMarketCapCoins(
@@ -113,7 +265,7 @@ export async function fetchTopMarketCapCoins(
     id: coin.id,
     symbol: coin.symbol.toUpperCase(),
     name: coin.name,
-    marketCapRank: coin.market_cap_rank,
+    marketCapRank: coin.market_cap_rank ?? 9999,
   }));
 }
 
@@ -156,7 +308,7 @@ export async function fetchKlines(
     `Binance klines ${symbol} ${interval}`,
     url,
   );
-  return data.map(mapKline);
+  return sanitizeCandles(data.map(mapKline));
 }
 
 export async function fetchFundingRateHistory(
@@ -176,12 +328,14 @@ export async function fetchFundingRateHistory(
     }>
   >(`Binance funding ${symbol}`, url);
 
-  return data.map((item) => ({
-    symbol: item.symbol,
-    fundingRate: Number(item.fundingRate),
-    fundingTime: new Date(item.fundingTime).toISOString(),
-    markPrice: item.markPrice ? Number(item.markPrice) : undefined,
-  }));
+  return sanitizeFundingHistory(
+    data.map((item) => ({
+      symbol: item.symbol,
+      fundingRate: Number(item.fundingRate),
+      fundingTime: new Date(item.fundingTime).toISOString(),
+      markPrice: item.markPrice ? Number(item.markPrice) : undefined,
+    })),
+  );
 }
 
 export async function fetchOpenInterestHistory(
@@ -203,10 +357,12 @@ export async function fetchOpenInterestHistory(
     }>
   >(`Binance open interest ${symbol}`, url);
 
-  return data.map((item) => ({
-    symbol: item.symbol,
-    sumOpenInterest: Number(item.sumOpenInterest),
-    sumOpenInterestValue: Number(item.sumOpenInterestValue),
-    timestamp: new Date(Number(item.timestamp)).toISOString(),
-  }));
+  return sanitizeOpenInterestHistory(
+    data.map((item) => ({
+      symbol: item.symbol,
+      sumOpenInterest: Number(item.sumOpenInterest),
+      sumOpenInterestValue: Number(item.sumOpenInterestValue),
+      timestamp: new Date(Number(item.timestamp)).toISOString(),
+    })),
+  );
 }

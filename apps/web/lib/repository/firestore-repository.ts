@@ -6,6 +6,7 @@ import {
   type CreateTradePayload,
   type IndicatorDefinition,
   type IndicatorProposal,
+  type PerformanceSnapshot,
   type ScanRun,
   type SignalCandidate,
   type SignalSnapshot,
@@ -13,6 +14,7 @@ import {
   type TradeJournalEntry,
   type TradeReviewReport,
   type UserSettings,
+  type WalkForwardSummary,
 } from "@crypto-futures/shared";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -37,6 +39,27 @@ async function listOwnedDocuments<T extends { ownerId?: string }>(name: string) 
   return snapshot.docs
     .map((doc) => doc.data() as T)
     .filter((item) => item.ownerId === env.appOwnerId);
+}
+
+async function getOwnedMarketStateDocument<
+  T extends { ownerId?: string } | null,
+>(id: string): Promise<T | null> {
+  const db = getAdminDb();
+  if (!db) {
+    throw new Error("Firebase admin yapilandirmasi eksik.");
+  }
+
+  const doc = await db.collection("marketState").doc(id).get();
+  if (!doc.exists) {
+    return null;
+  }
+
+  const data = doc.data() as T;
+  if (data && "ownerId" in data && data.ownerId !== env.appOwnerId) {
+    return null;
+  }
+
+  return data;
 }
 
 function sortByNumberDesc<T>(items: T[], selector: (item: T) => number) {
@@ -78,7 +101,18 @@ function pickLatestProposalByFingerprint(proposals: IndicatorProposal[]) {
 
 export class FirestoreRepository implements DataRepository {
   async getDashboardData(): Promise<DashboardData> {
-    const [signals, candidates, trades, reviews, indicators, proposals, settings, scanRuns] =
+    const [
+      signals,
+      candidates,
+      trades,
+      reviews,
+      indicators,
+      proposals,
+      settings,
+      scanRuns,
+      performance,
+      walkForward,
+    ] =
       await Promise.all([
         this.getSignals(),
         this.getSignalCandidates(),
@@ -88,6 +122,8 @@ export class FirestoreRepository implements DataRepository {
         this.getIndicatorProposals(),
         this.getSettings(),
         this.getScanRuns(),
+        getOwnedMarketStateDocument<PerformanceSnapshot>("performance"),
+        getOwnedMarketStateDocument<WalkForwardSummary>("walkForward"),
       ]);
 
     return {
@@ -99,6 +135,8 @@ export class FirestoreRepository implements DataRepository {
       indicators,
       proposals,
       settings,
+      performance,
+      walkForward,
     };
   }
 

@@ -91,7 +91,7 @@ describe("refreshUniverseJob", () => {
       ownerId: "local-owner",
       preferredRiskPerTradePct: 1,
       maxSignals: 5,
-      whitelistSymbols: ["BONKUSDT", "COIN1USDT"],
+      whitelistSymbols: ["BONK", "COIN1USDT"],
       activeIndicatorIds: [],
       scanIntervalMinutes: 15,
       language: "tr",
