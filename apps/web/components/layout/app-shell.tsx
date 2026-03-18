@@ -8,11 +8,9 @@ import {
   CandlestickChart,
   FlaskConical,
   Settings2,
-  Sparkles,
-  Waypoints,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -23,62 +21,28 @@ const navigation = [
   { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 
-const pageMeta = {
-  "/": {
-    title: "Piyasayi tara, sinyali sec, gunu tek panelden yonet",
-    description:
-      "Canli market tarama, trade hafizasi ve AI destekli gelisim akislarini ayni yerde toparla.",
-  },
-  "/trades": {
-    title: "Acik ve kapanan islemleri temiz bir trade hafizasinda tut",
-    description:
-      "Her islemde entry, exit, not ve sonuc ayni akis icinde gorunsun; review sureci daha net ilerlesin.",
-  },
-  "/ai": {
-    title: "AI Coach ile hatalari, iyilestirmeleri ve yeni filtreleri tek yerde gor",
-    description:
-      "Trade review, indicator onerileri ve karar kalitesi ayni baglam icinde anlam kazansin.",
-  },
-  "/indicators": {
-    title: "Filtre katalogunu ve AI onerilerini daha guvenli bir laboratuvarda yonet",
-    description:
-      "Shadow ve live gecislerini karistirmadan, her indikatorun durumunu kolayca takip et.",
-  },
-  "/settings": {
-    title: "Runtime ve tarama tercihlerine tek bakista hakim ol",
-    description:
-      "Lokal canli mod, Firebase durumu ve manuel sync akislarini daha rahat kontrol et.",
-  },
-} as const;
-
-function resolvePageMeta(pathname: string) {
-  if (pathname.startsWith("/signals/")) {
-    return {
-      title: "Sinyali karar ekraninda oku ve journale kontrollu sekilde gonder",
-      description:
-        "Entry, stop, hedefler ve teknik gerekceler ayni yuzeyde kalsin; karar vermek hizlansin.",
-    };
-  }
-
-  return pageMeta[pathname as keyof typeof pageMeta] ?? pageMeta["/"];
-}
-
 export function AppShell({
   children,
+  username,
 }: {
   children: React.ReactNode;
+  username?: string | null;
 }) {
   const pathname = usePathname();
-  const isMockMode = process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== "false";
-  const meta = resolvePageMeta(pathname);
+
+  if (pathname.startsWith("/login")) {
+    return <main className="min-h-screen">{children}</main>;
+  }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1720px] gap-5 px-4 py-5 md:px-6 lg:px-8">
-      <aside className="hidden w-[296px] shrink-0 lg:block xl:w-[304px] 2xl:w-[316px]">
-        <div className="sticky top-5 flex flex-col gap-4">
-          <div className="glass-panel rounded-[30px] p-4">
-            <p className="text-[11px] uppercase tracking-[0.32em] text-muted">Moduller</p>
-            <nav className="mt-3 space-y-2">
+    <div className="mx-auto flex min-h-screen max-w-[1680px] gap-5 px-4 py-5 md:px-6 lg:px-8">
+      <aside className="hidden w-[288px] shrink-0 lg:block xl:w-[300px]">
+        <div className="sticky top-5 space-y-4">
+          <nav className="glass-panel rounded-[28px] p-3">
+            <div className="px-2 pb-3 pt-1">
+              <p className="text-[11px] uppercase tracking-[0.32em] text-muted">Menu</p>
+            </div>
+            <div className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const active =
@@ -112,105 +76,28 @@ export function AppShell({
                     </span>
                     <span
                       className={cn(
-                        "shrink-0",
-                        "h-2.5 w-2.5 rounded-full transition",
+                        "h-2.5 w-2.5 shrink-0 rounded-full transition",
                         active ? "bg-accent" : "bg-white/10 group-hover:bg-white/20",
                       )}
                     />
                   </Link>
                 );
               })}
-            </nav>
-          </div>
-
-          <div className="glass-panel rounded-[30px] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] uppercase tracking-[0.32em] text-muted">Sistem Durumu</p>
-              <Badge tone={isMockMode ? "warning" : "success"}>
-                {isMockMode ? "Mock" : "Live"}
-              </Badge>
             </div>
-            <div className="mt-3 space-y-3">
-              <div className="metric-panel rounded-[22px] p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-text">
-                      {isMockMode ? "Demo veri akisi" : "Canli Firebase deposu"}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-muted">
-                      {isMockMode
-                        ? "UI testleri icin demo veri acik."
-                        : "Canli market ve depolama baglantisi etkin."}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "h-3 w-3 rounded-full",
-                      isMockMode ? "bg-warning" : "bg-success",
-                    )}
-                  />
-                </div>
-              </div>
+          </nav>
 
-              <div className="soft-panel rounded-[22px] p-4 text-sm leading-6 text-muted">
-                <div className="flex items-center gap-2 text-text">
-                  <Waypoints className="h-4 w-4 text-accent" />
-                  <span className="font-medium">Akis ozeti</span>
-                </div>
-                <p className="mt-2">
-                  Tarama, journal ve AI modulleri ayni runtime ustunde calisir.
-                </p>
-              </div>
+          <div className="glass-panel rounded-[28px] p-4">
+            <p className="text-[11px] uppercase tracking-[0.32em] text-muted">Session</p>
+            <p className="mt-3 text-sm font-medium text-text">{username ?? "Aktif kullanici"}</p>
+            <p className="mt-1 text-sm leading-6 text-muted">Bu panel korumali oturumla acik.</p>
+            <div className="mt-4">
+              <LogoutButton />
             </div>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col gap-5 pb-24 lg:pb-10">
-        <header className="glass-panel rounded-[32px] p-5 md:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="neutral">Kisisel Trading Workspace</Badge>
-                <Badge tone={isMockMode ? "warning" : "success"}>
-                  {isMockMode ? "Mock runtime" : "Canli runtime"}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.34em] text-accent">Control Center</p>
-                <h2 className="max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.03em] text-text md:text-3xl">
-                  {meta.title}
-                </h2>
-                <p className="max-w-2xl text-sm leading-7 text-muted">{meta.description}</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:w-[420px]">
-              <div className="metric-panel rounded-[24px] p-4">
-                <div className="flex items-center gap-2 text-text">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-semibold">Arayuz hedefi</span>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  Daha az karmasa, daha hizli karar ve daha temiz aksiyon bloklari.
-                </p>
-              </div>
-              <div className="metric-panel rounded-[24px] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Aktif Sayfa</p>
-                <p className="mt-3 text-lg font-semibold text-text">
-                  {navigation.find((item) =>
-                    item.href === "/"
-                      ? pathname === item.href
-                      : pathname === item.href || pathname.startsWith(`${item.href}/`),
-                  )?.label ?? "Signal Detail"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
+      <main className="min-w-0 flex-1 pb-24 lg:pb-10">{children}</main>
 
       <nav className="glass-panel fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-[26px] px-3 py-2 lg:hidden">
         {navigation.map((item) => {

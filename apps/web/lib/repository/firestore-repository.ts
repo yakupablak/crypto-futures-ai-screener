@@ -86,6 +86,15 @@ function buildDefaultSettings(): UserSettings {
   };
 }
 
+function normalizeWhitelistSymbol(rawSymbol: string) {
+  const cleaned = rawSymbol.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!cleaned) {
+    throw new Error("Gecerli bir coin sembolu gir.");
+  }
+
+  return cleaned.endsWith("USDT") ? cleaned : `${cleaned}USDT`;
+}
+
 function pickLatestProposalByFingerprint(proposals: IndicatorProposal[]) {
   const map = new Map<string, IndicatorProposal>();
 
@@ -423,5 +432,30 @@ export class FirestoreRepository implements DataRepository {
     );
 
     return dedupeIndicatorProposals(responseProposals, indicators);
+  }
+
+  async updateWhitelistSymbol(symbol: string, action: "add" | "remove") {
+    const db = getAdminDb();
+    if (!db) {
+      throw new Error("Firebase admin yapilandirmasi eksik.");
+    }
+
+    const settings = await this.getSettings();
+    const normalizedSymbol = normalizeWhitelistSymbol(symbol);
+    const whitelist = new Set(settings.whitelistSymbols);
+
+    if (action === "add") {
+      whitelist.add(normalizedSymbol);
+    } else {
+      whitelist.delete(normalizedSymbol);
+    }
+
+    const nextSettings: UserSettings = {
+      ...settings,
+      whitelistSymbols: [...whitelist].sort(),
+    };
+
+    await db.collection("settings").doc(SETTINGS_DOC_ID).set(nextSettings);
+    return nextSettings;
   }
 }

@@ -18,7 +18,16 @@ export interface FullSyncOptions {
   includeWalkForward?: boolean;
 }
 
-export async function runFullSync(options: FullSyncOptions = {}) {
+export interface FullSyncResult {
+  ownerId: string;
+  universe?: Awaited<ReturnType<typeof refreshUniverseJob>>;
+  scan?: Awaited<ReturnType<typeof runMarketScanJob>>;
+  shadow?: Awaited<ReturnType<typeof evaluateShadowIndicatorsJob>>;
+  performance?: Awaited<ReturnType<typeof aggregatePerformanceJob>>;
+  walkForward?: Awaited<ReturnType<typeof runWalkForwardJob>>;
+}
+
+export async function runFullSync(options: FullSyncOptions = {}): Promise<FullSyncResult> {
   const {
     includeUniverse = true,
     includeScan = true,
@@ -29,7 +38,7 @@ export async function runFullSync(options: FullSyncOptions = {}) {
 
   const db = getDb();
   const settings = await getSettings();
-  const results: Record<string, unknown> = {
+  const results: FullSyncResult = {
     ownerId: settings.ownerId,
   };
 

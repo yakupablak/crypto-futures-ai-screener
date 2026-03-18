@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typegen": "next typegen",
+    "typegen": "node -e \"const fs=require('node:fs'); const path=require('node:path'); ['.next\\\\types','.next-dev\\\\types'].forEach((name)=>fs.rmSync(path.join(process.cwd(),name),{recursive:true,force:true}));\" && next typegen",
     "lint": "eslint .",
     "typecheck": "npm run typegen && tsc -p tsconfig.json --noEmit"
   },

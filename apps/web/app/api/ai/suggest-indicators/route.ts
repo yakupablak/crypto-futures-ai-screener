@@ -3,6 +3,7 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 
 import { createRouteLogger } from "@/lib/api-logging";
+import { requireApiSession } from "@/lib/auth/server";
 import { getRepository } from "@/lib/repository";
 
 const schema = z.object({
@@ -16,6 +17,11 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
     log.request(body);
+    const session = await requireApiSession(request);
+    if (session instanceof NextResponse) {
+      return session;
+    }
+
     const payload = schema.parse(body);
     const repository = getRepository();
     const proposals = await repository.suggestIndicators(payload.context);
@@ -23,6 +29,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: proposals });
   } catch (error) {
     log.error(error, body);
-    return NextResponse.json({ error: "Indicator önerileri üretilemedi." }, { status: 500 });
+    return NextResponse.json({ error: "Indicator onerileri uretilemedi." }, { status: 500 });
   }
 }

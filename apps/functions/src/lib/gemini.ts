@@ -6,6 +6,7 @@ import {
   tradeReviewReportSchema,
   type IndicatorDefinition,
   type IndicatorProposal,
+  type SignalSnapshot,
   type TradeJournalEntry,
   type TradeReviewReport,
 } from "@crypto-futures/shared";
@@ -21,6 +22,10 @@ const TURKISH_OUTPUT_INSTRUCTION = [
 ].join("\n");
 
 type JsonRecord = Record<string, unknown>;
+type SignalQuestionHistoryItem = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -508,5 +513,77 @@ Her proposal icin alanlar:
       error,
     });
     return buildIndicatorProposalFallback(trades);
+  }
+}
+
+function buildSignalQuestionFallback(signal: SignalSnapshot, question: string) {
+  return {
+    answer: `${signal.symbol} icin fallback analiz: ${signal.summary} Soruya en yakin yorum olarak once entry ${signal.entry}, stop ${signal.stop} ve risk/odul ${signal.riskReward.toFixed(2)} dengesine bak. Pozisyon ancak bu plana sadik kalacaksan anlamli olur.`,
+    bullets: [
+      `Trend: ${signal.trend}`,
+      `Setup: ${signal.setup}`,
+      `Funding/OI: ${signal.marketMetrics.squeezeBias}`,
+      `Soru ozeti: ${question}`,
+    ],
+  };
+}
+
+export async function answerSignalQuestion(
+  signal: SignalSnapshot,
+  question: string,
+  history: SignalQuestionHistoryItem[] = [],
+) {
+  if (!config.geminiApiKey) {
+    return buildSignalQuestionFallback(signal, question);
+  }
+
+  const safeHistory = history
+    .filter(
+      (item) =>
+        (item.role === "user" || item.role === "assistant") &&
+        typeof item.content === "string" &&
+        item.content.trim().length > 0,
+    )
+    .slice(-6);
+
+  const prompt = `
+Sen ust duzey bir crypto futures trader, risk analisti ve trade execution kocusun.
+Kullaniciya yalnizca Turkce cevap ver.
+Finansal kesinlik iddiasi kurma; senaryo, risk, invalidation ve izlenecek seviyeleri acikla.
+Yalnizca JSON dondur.
+
+Signal:
+${JSON.stringify(signal, null, 2)}
+
+Onceki konusma:
+${JSON.stringify(safeHistory, null, 2)}
+
+Kullanicinin yeni sorusu:
+${question}
+
+Donus semasi:
+{
+  "answer": "Kisa ama uygulanabilir Turkce cevap",
+  "bullets": ["en fazla 4 maddelik kisa destek notlari"]
+}
+`;
+
+  try {
+    const result = await callGeminiJson<unknown>(
+      config.geminiModel,
+      prompt,
+      "signalQuestion",
+    );
+    const record = isRecord(result) ? result : {};
+    return {
+      answer: getString(record.answer, buildSignalQuestionFallback(signal, question).answer),
+      bullets: getStringArray(record.bullets, []),
+    };
+  } catch (error) {
+    logger.warn("Gemini signal question invalid, fallback answer will be used", {
+      signalId: signal.id,
+      error,
+    });
+    return buildSignalQuestionFallback(signal, question);
   }
 }

@@ -137,7 +137,7 @@ export class MockRepository implements DataRepository {
     const store = getStore();
     const signal = store.signals.find((item) => item.id === payload.signalId);
     if (!signal) {
-      throw new Error("Signal bulunamadı.");
+      throw new Error("Signal bulunamadi.");
     }
 
     const trade: TradeJournalEntry = {
@@ -170,7 +170,7 @@ export class MockRepository implements DataRepository {
     const store = getStore();
     const trade = store.trades.find((item) => item.id === id);
     if (!trade) {
-      throw new Error("Trade bulunamadı.");
+      throw new Error("Trade bulunamadi.");
     }
 
     const result = toTradePnl(trade, payload.closePrice);
@@ -188,7 +188,7 @@ export class MockRepository implements DataRepository {
     const store = getStore();
     const proposal = store.proposals.find((item) => item.id === id);
     if (!proposal) {
-      throw new Error("Indicator proposal bulunamadı.");
+      throw new Error("Indicator proposal bulunamadi.");
     }
 
     proposal.status = "APPROVED";
@@ -205,7 +205,7 @@ export class MockRepository implements DataRepository {
     const store = getStore();
     const indicator = store.indicators.find((item) => item.id === id);
     if (!indicator) {
-      throw new Error("Indicator bulunamadı.");
+      throw new Error("Indicator bulunamadi.");
     }
 
     indicator.status =
@@ -233,9 +233,9 @@ export class MockRepository implements DataRepository {
       tradeId: tradeId ?? null,
       type: "TRADE_REVIEW",
       summary:
-        "Mock modda AI yerine deterministik analiz raporu döndürüldü. Firebase Functions bağlanınca Gemini değerlendirmesi devreye girecek.",
-      mistakes: ["Pozisyon sonrası sistem içi açıklama ve not tutulması önerilir."],
-      improvements: ["Trade kapanışlarında kapanış nedeni ekle."],
+        "Mock modda AI yerine deterministik analiz raporu donduruldu. Firebase Functions baglaninca Gemini degerlendirmesi devreye girecek.",
+      mistakes: ["Pozisyon sonrasi sistem ici aciklama ve not tutulmasi onerilir."],
+      improvements: ["Trade kapanislarinda kapanis nedeni ekle."],
       proposedIndicatorIds: [],
       confidence: 0.65,
       createdAt: new Date().toISOString(),
@@ -246,5 +246,25 @@ export class MockRepository implements DataRepository {
 
   async suggestIndicators(_context?: string) {
     return clone(getStore().proposals);
+  }
+
+  async updateWhitelistSymbol(symbol: string, action: "add" | "remove") {
+    const store = getStore();
+    const normalized = symbol.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!normalized) {
+      throw new Error("Gecerli bir coin sembolu gir.");
+    }
+
+    const nextSymbol = normalized.endsWith("USDT") ? normalized : `${normalized}USDT`;
+    const whitelist = new Set(store.settings.whitelistSymbols);
+
+    if (action === "add") {
+      whitelist.add(nextSymbol);
+    } else {
+      whitelist.delete(nextSymbol);
+    }
+
+    store.settings.whitelistSymbols = [...whitelist].sort();
+    return clone(store.settings);
   }
 }

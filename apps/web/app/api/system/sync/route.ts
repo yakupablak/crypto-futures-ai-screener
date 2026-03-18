@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createRouteLogger } from "@/lib/api-logging";
+import { requireApiSession } from "@/lib/auth/server";
 import { runFullSync } from "../../../../../functions/src/jobs/run-full-sync";
 
 const schema = z.object({
@@ -15,6 +16,11 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
     log.request(body);
+    const session = await requireApiSession(request);
+    if (session instanceof NextResponse) {
+      return session;
+    }
+
     const payload = schema.parse(body);
 
     const result =
@@ -52,6 +58,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: result });
   } catch (error) {
     log.error(error, body);
-    return NextResponse.json({ error: "Senkronizasyon tamamlanamadı." }, { status: 500 });
+    return NextResponse.json({ error: "Senkronizasyon tamamlanamadi." }, { status: 500 });
   }
 }

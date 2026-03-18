@@ -38,8 +38,7 @@ export default async function TradesPage() {
     <div className="page-section pb-10">
       <PageHeader
         eyebrow="Trade Journal"
-        title="Acik ve kapanan islemleri tek bir karar hafizasinda topla."
-        description="Entry, stop, hedef, not ve AI review akisi ayni yuzeyde kalsin; geriye donup neyi dogru neyi zayif yaptigini daha hizli okuyabilelim."
+        title="Trade journal"
         stats={[
           {
             label: "Acik Trade",
@@ -68,31 +67,21 @@ export default async function TradesPage() {
       />
 
       <section className="space-y-5">
-        <SectionTitle
-          eyebrow="Open Trades"
-          title="Aktif pozisyonlar"
-          description="Kapatma aksiyonu, notlar ve mevcut setup ayni kart icinde yer alsin."
-        />
+        <SectionTitle eyebrow="Open Trades" title="Aktif pozisyonlar" />
         <div className="grid gap-5">
           {openTrades.length > 0 ? (
             openTrades.map((trade) => <TradeCard key={trade.id} trade={trade} />)
           ) : (
             <Card className="p-8">
               <p className="text-lg font-semibold text-text">Acik trade yok</p>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
-                Signal detay ekranindan bir trade sectiginde burada yonetmeye hazir gorunecek.
-              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">Sectigin trade burada gorunecek.</p>
             </Card>
           )}
         </div>
       </section>
 
       <section className="space-y-5">
-        <SectionTitle
-          eyebrow="Closed Trades"
-          title="Kapanmis islemler"
-          description="Sonuc, AI review ve dersler ayni yerde toplanarak gelisim dongusu netlessin."
-        />
+        <SectionTitle eyebrow="Closed Trades" title="Kapanmis islemler" />
         <div className="grid gap-5">
           {closedTrades.length > 0 ? (
             closedTrades.map((trade) => <TradeCard key={trade.id} trade={trade} />)
@@ -100,8 +89,7 @@ export default async function TradesPage() {
             <Card className="p-8">
               <p className="text-lg font-semibold text-text">Kapanmis trade yok</p>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
-                Ilk trade kapanisindan sonra performans metrikleri ve review butonu daha anlamli
-                hale gelecek.
+                Ilk kapanis sonrasi review ve performans metrikleri burada gorunecek.
               </p>
             </Card>
           )}
@@ -131,7 +119,7 @@ function TradeCard({ trade }: { trade: TradeJournalEntry }) {
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight text-text">{trade.symbol}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  {formatSetupLabel(trade.setup)} • {trade.leverage}x kaldirac
+                  {formatSetupLabel(trade.setup)} - {trade.leverage}x kaldirac
                 </p>
               </div>
             </div>
@@ -186,10 +174,7 @@ function TradeCard({ trade }: { trade: TradeJournalEntry }) {
             <div className="space-y-4 rounded-[26px] border border-white/10 bg-black/20 p-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-muted">AI Review</p>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  Bu trade'in sonucunu AI ile degerlendirip hatalari ve gelisim noktalarini Turkce
-                  inceleyebilirsin.
-                </p>
+                <p className="mt-2 text-sm leading-6 text-muted">Bu trade'i AI ile degerlendir.</p>
               </div>
               <ReviewTradeButton tradeId={trade.id} />
             </div>

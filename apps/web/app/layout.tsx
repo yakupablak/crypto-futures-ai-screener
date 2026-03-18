@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 
-import { AppShell } from "@/components/layout/app-shell";
-
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -34,7 +32,7 @@ export default async function RootLayout({
     >
       <body style={{ fontFamily: "var(--font-body)" }}>
         <div style={{ fontFamily: "var(--font-display)" }} className="sr-only" />
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

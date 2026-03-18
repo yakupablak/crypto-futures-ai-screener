@@ -30,3 +30,4 @@ firebase-adminsdk-*.json
 Thumbs.db
 .vscode/
 .idea/
+.vercel

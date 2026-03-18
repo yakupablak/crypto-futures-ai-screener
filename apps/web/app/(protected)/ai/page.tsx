@@ -40,8 +40,7 @@ export default async function AIPage() {
     <div className="page-section pb-10">
       <PageHeader
         eyebrow="AI Coach"
-        title="Trade kalitesini sadece sonucla degil, karar sureciyle birlikte gelistir."
-        description="Review, hata analizi ve indikator onerilerini ayni karar panelinde toplayarak AI ciktilarini daha guvenli ve daha kullanisli hale getiriyoruz."
+        title="AI review ve oneriler"
         stats={[
           {
             label: "Son Review",
@@ -60,32 +59,20 @@ export default async function AIPage() {
             hint: `${reviews.length} AI cikti kaydi uzerinden hesaplandi`,
             tone: averageConfidence >= 0.7 ? "success" : "warning",
           },
-          {
-            label: "Toplam Oneri",
-            value: proposals.length.toString(),
-            hint: "Kayitli tum AI indicator onerileri",
-          },
         ]}
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <section className="space-y-6">
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Actions"
-              title="AI aksiyonlarini net bloklara ayir"
-              description="Hangi butonun ne uretecegi daha belirgin olsun; review ve yeni indikator istegi birbirine karismasin."
-            />
+            <SectionTitle eyebrow="Actions" title="Hizli aksiyonlar" />
 
             <div className="mt-5 grid gap-4">
               <div className="soft-panel rounded-[28px] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-text">Trade review olustur</p>
-                    <p className="max-w-xl text-sm leading-6 text-muted">
-                      Son trade sonucunu, hatalari ve bir sonraki islem icin gelisim alanlarini
-                      Turkce olarak cikar.
-                    </p>
+                    <p className="max-w-xl text-sm leading-6 text-muted">Son kapanan islemi AI ile yorumla.</p>
                   </div>
                   {lastClosedTrade ? <Badge tone="success">{lastClosedTrade.symbol}</Badge> : null}
                 </div>
@@ -98,8 +85,7 @@ export default async function AIPage() {
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-text">Yeni indikator onerisi iste</p>
                   <p className="max-w-xl text-sm leading-6 text-muted">
-                    Realize edilen islemler ve verdigin baglam uzerinden yeni filtre fikirleri
-                    uret. Aynilari tekrar yazma ve gerekirse guvenli fallback kullan.
+                    Kapanan islemlere gore yeni filtre fikri uret.
                   </p>
                 </div>
                 <div className="mt-4">
@@ -110,15 +96,11 @@ export default async function AIPage() {
           </Card>
 
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Proposals"
-              title="Onay bekleyen AI onerileri"
-              description="Shadow moda alinmadan once ozet, dayanak ve durum bilgisi burada daha okunur kalsin."
-            />
+            <SectionTitle eyebrow="Proposals" title="Bekleyen oneriler" />
 
             <div className="mt-5 space-y-3">
-              {proposals.length > 0 ? (
-                proposals.slice(0, 6).map((proposal) => (
+              {pendingProposals.length > 0 ? (
+                pendingProposals.slice(0, 6).map((proposal) => (
                   <div key={proposal.id} className="metric-panel rounded-[26px] p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -155,7 +137,7 @@ export default async function AIPage() {
                 ))
               ) : (
                 <div className="soft-panel rounded-[24px] px-4 py-3 text-sm leading-6 text-muted">
-                  Henuz AI indicator onerisi olusmadi.
+                  Bekleyen AI onerisi yok.
                 </div>
               )}
             </div>
@@ -164,11 +146,7 @@ export default async function AIPage() {
 
         <aside>
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Recent Reviews"
-              title="Son AI ciktilari"
-              description="Review ozeti, hata kaliplari ve gelisim onerileri yan yana okunabilsin."
-            />
+            <SectionTitle eyebrow="Recent Reviews" title="Son AI ciktilari" />
 
             <div className="mt-5 space-y-4">
               {reviews.length > 0 ? (

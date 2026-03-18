@@ -18,13 +18,11 @@ export function DashboardHero({ data }: { data: DashboardData }) {
 
   return (
     <PageHeader
-      eyebrow="Screener Dashboard"
-      title="En guclu sinyalleri, aktif trade'leri ve son tarama nabzini tek bakista gor."
-      description="Binance USDT perpetual evreni, deterministik futures kurallari ve AI destekli trade hafizasi ayni kontrol katmaninda birlesiyor."
-      chips={[
-        { label: "Top 200 + Whitelist", tone: "warning" },
-        ...(bestSignal ? [{ label: `Lider: ${bestSignal.symbol}`, tone: "success" as const }] : []),
-      ]}
+      eyebrow="Dashboard"
+      title="Sinyaller ve performans"
+      chips={
+        bestSignal ? [{ label: `Lider: ${bestSignal.symbol}`, tone: "success" as const }] : []
+      }
       stats={[
         {
           label: "Son Tarama",
@@ -33,13 +31,13 @@ export function DashboardHero({ data }: { data: DashboardData }) {
                 addSuffix: true,
               })
             : "Henuz yok",
-          hint: `${data.latestScan?.scannedSymbols ?? 0} coin tarandi`,
+          hint: `${data.latestScan?.scannedSymbols ?? 0} coin`,
           tone: "accent",
         },
         {
           label: "Aktif Sinyal",
           value: data.signals.length.toString(),
-          hint: `${data.latestScan?.shortlistedSymbols ?? 0} aday shortlist'e girdi`,
+          hint: `${data.latestScan?.shortlistedSymbols ?? 0} shortlist`,
         },
         {
           label: "Canli Expectancy",
@@ -47,7 +45,7 @@ export function DashboardHero({ data }: { data: DashboardData }) {
           hint:
             data.performance != null
               ? `${data.performance.totalClosedTrades} kapali trade, PF ${data.performance.profitFactor?.toFixed(2) ?? "-"}`
-              : `${closedTrades.length} kapanmis islem hafizada`,
+              : `${closedTrades.length} kapali trade`,
           tone:
             (data.performance?.expectancyR ?? 0) > 0
               ? "success"
@@ -56,15 +54,15 @@ export function DashboardHero({ data }: { data: DashboardData }) {
                 : "neutral",
         },
         {
-          label: "Walk-Forward Test",
+          label: "Walk-Forward",
           value:
             data.walkForward != null
               ? formatRMultiple(data.walkForward.testExpectancyR)
               : `${winRate.toFixed(0)}%`,
           hint:
             data.walkForward != null
-              ? `${data.walkForward.testSignals} out-of-sample signal, WR ${formatPercent(data.walkForward.testWinRate)}`
-              : `${data.aiReviews.length} AI review mevcut, ${openTrades} acik trade`,
+              ? `${data.walkForward.testSignals} test signal, WR ${formatPercent(data.walkForward.testWinRate)}`
+              : `${openTrades} acik trade`,
           tone:
             (data.walkForward?.testExpectancyR ?? 0) > 0
               ? "success"

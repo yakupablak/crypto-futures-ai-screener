@@ -24,13 +24,12 @@ export default async function IndicatorsPage() {
     <div className="page-section pb-10">
       <PageHeader
         eyebrow="Indicator Lab"
-        title="Filtre katalogunu ve AI onerilerini daha kontrollu bir laboratuvarda yonet."
-        description="Live, shadow ve bekleyen oneriler ayni ekranda okunakli kalinca dinamik sistemle calismak daha guvenli hale geliyor."
+        title="Indikatorler"
         stats={[
           {
             label: "Toplam Filter",
             value: indicators.length.toString(),
-            hint: "Built-in ve AI eklemeleri dahil",
+            hint: "Tum katalog",
           },
           {
             label: "Live",
@@ -45,9 +44,9 @@ export default async function IndicatorsPage() {
             tone: "warning",
           },
           {
-            label: "Bekleyen Oneri",
+            label: "Bekleyen",
             value: pendingProposals.length.toString(),
-            hint: "Onay bekleyen AI indicator onerileri",
+            hint: "Onay bekleyen AI onerileri",
             tone: "accent",
           },
         ]}
@@ -56,11 +55,7 @@ export default async function IndicatorsPage() {
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.9fr]">
         <section>
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Catalog"
-              title="Aktif indikator katalogu"
-              description="Her filtrenin durumunu, versiyonunu ve skor etkisini rahatca takip et."
-            />
+            <SectionTitle eyebrow="Catalog" title="Aktif katalog" />
 
             <div className="mt-5 space-y-4">
               {indicators.length > 0 ? (
@@ -97,13 +92,13 @@ export default async function IndicatorsPage() {
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <MetricTile
-                        label="Score Impact"
+                        label="Skor Etkisi"
                         value={indicator.scoreAdjustment.toFixed(2)}
                         hint={`DSL seri sayisi: ${indicator.dsl.series.length}`}
                         tone="accent"
                       />
                       <MetricTile
-                        label="Version"
+                        label="Versiyon"
                         value={`v${indicator.version}`}
                         hint={
                           indicator.approvedAt
@@ -125,11 +120,7 @@ export default async function IndicatorsPage() {
 
         <aside>
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Pending Queue"
-              title="Onay bekleyen oneriler"
-              description="AI tarafindan gelen yeni filtreler burada shadow moda alinmadan once gozden gecirilsin."
-            />
+            <SectionTitle eyebrow="Pending Queue" title="Bekleyen oneriler" />
 
             <div className="mt-5 space-y-4">
               {pendingProposals.length > 0 ? (
@@ -153,7 +144,7 @@ export default async function IndicatorsPage() {
                       <MetricTile
                         label="Trade Dayanagi"
                         value={proposal.basedOnTradeIds.length.toString()}
-                        hint="AI baglaminda kullanilan trade sayisi"
+                        hint="Kullanilan trade sayisi"
                       />
                     </div>
 

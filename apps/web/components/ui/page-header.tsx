@@ -26,16 +26,16 @@ export function PageHeader({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   stats?: HeaderStat[];
   chips?: HeaderChip[];
   actions?: ReactNode;
 }) {
   return (
-    <Card className="relative overflow-hidden p-6 md:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,154,71,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(45,209,143,0.08),transparent_24%)]" />
-      <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-        <div className="max-w-3xl space-y-5">
+    <Card className="relative overflow-hidden p-5 md:p-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,154,71,0.1),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(45,209,143,0.06),transparent_22%)]" />
+      <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="max-w-3xl space-y-4">
           {chips.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
               {chips.map((chip) => (
@@ -46,31 +46,35 @@ export function PageHeader({
             </div>
           ) : null}
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <p className="text-[11px] uppercase tracking-[0.34em] text-accent">{eyebrow}</p>
-            <h1 className="max-w-3xl text-3xl font-semibold leading-tight tracking-[-0.03em] text-text md:text-4xl">
+            <h1 className="max-w-3xl text-3xl font-semibold leading-tight tracking-[-0.03em] text-text md:text-[2.5rem]">
               {title}
             </h1>
-            <p className="max-w-2xl text-sm leading-7 text-muted md:text-[15px]">{description}</p>
+            {description ? (
+              <p className="max-w-2xl text-sm leading-7 text-muted md:text-[15px]">{description}</p>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-4 xl:max-w-[540px]">
-          {actions ? <div className="soft-panel rounded-[28px] p-4">{actions}</div> : null}
-          {stats.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {stats.map((stat) => (
-                <MetricTile
-                  key={stat.label}
-                  label={stat.label}
-                  value={stat.value}
-                  hint={stat.hint}
-                  tone={stat.tone}
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
+        {(actions || stats.length > 0) ? (
+          <div className="flex w-full flex-col gap-4 xl:max-w-[540px]">
+            {actions ? <div className="soft-panel rounded-[24px] p-4">{actions}</div> : null}
+            {stats.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {stats.map((stat) => (
+                  <MetricTile
+                    key={stat.label}
+                    label={stat.label}
+                    value={stat.value}
+                    hint={stat.hint}
+                    tone={stat.tone}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Card>
   );

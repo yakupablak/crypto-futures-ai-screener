@@ -1,6 +1,7 @@
 import fs from "node:fs";
 
 import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 import { getFirebaseServiceAccountPath, hasFirebaseAdminConfig } from "@/lib/env";
@@ -29,13 +30,13 @@ function getCredentialFromServiceAccountFile() {
   });
 }
 
-export function getAdminDb() {
+export function getAdminApp() {
   if (!hasFirebaseAdminConfig()) {
     return null;
   }
 
   const fileCredential = getCredentialFromServiceAccountFile();
-  const app =
+  return (
     getApps()[0] ??
     initializeApp(
       fileCredential
@@ -49,7 +50,23 @@ export function getAdminDb() {
               privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             }),
           },
-    );
+    )
+  );
+}
 
+export function getAdminDb() {
+  const app = getAdminApp();
+  if (!app) {
+    return null;
+  }
   return getFirestore(app);
+}
+
+export function getAdminAuth() {
+  const app = getAdminApp();
+  if (!app) {
+    return null;
+  }
+
+  return getAuth(app);
 }

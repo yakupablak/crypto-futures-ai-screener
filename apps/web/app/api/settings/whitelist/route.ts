@@ -6,11 +6,12 @@ import { requireApiSession } from "@/lib/auth/server";
 import { getRepository } from "@/lib/repository";
 
 const schema = z.object({
-  tradeId: z.string().optional(),
+  symbol: z.string().min(1),
+  action: z.enum(["add", "remove"]).default("add"),
 });
 
 export async function POST(request: Request) {
-  const log = createRouteLogger("/api/ai/review-trade", "POST");
+  const log = createRouteLogger("/api/settings/whitelist", "POST");
   let body: unknown;
 
   try {
@@ -23,11 +24,15 @@ export async function POST(request: Request) {
 
     const payload = schema.parse(body);
     const repository = getRepository();
-    const review = await repository.reviewTrade(payload.tradeId);
-    log.success(201, { reviewId: review.id, tradeId: review.tradeId, type: review.type });
-    return NextResponse.json({ data: review }, { status: 201 });
+    const settings = await repository.updateWhitelistSymbol(payload.symbol, payload.action);
+    log.success(200, {
+      action: payload.action,
+      symbol: payload.symbol,
+      whitelistCount: settings.whitelistSymbols.length,
+    });
+    return NextResponse.json({ data: settings });
   } catch (error) {
     log.error(error, body);
-    return NextResponse.json({ error: "Trade review uretilemedi." }, { status: 500 });
+    return NextResponse.json({ error: "Whitelist guncellenemedi." }, { status: 500 });
   }
 }

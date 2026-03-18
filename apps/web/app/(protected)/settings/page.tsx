@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { SyncActions } from "@/components/system/sync-actions";
+import { WhitelistManager } from "@/components/system/whitelist-manager";
 import { Card } from "@/components/ui/card";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,8 +23,7 @@ export default async function SettingsPage() {
     <div className="page-section pb-10">
       <PageHeader
         eyebrow="Settings"
-        title="Runtime, tarama davranisi ve lokal canli akis ayarlarini tek yerde topla."
-        description="Lokal calismada bile sistemin neyle, hangi modda ve hangi varsayimlarla ayakta oldugunu net gormek karar kalitesini artirir."
+        title="Ayarlar"
         stats={[
           {
             label: "Mock Data",
@@ -46,7 +45,7 @@ export default async function SettingsPage() {
           {
             label: "Dil",
             value: settings.language.toUpperCase(),
-            hint: "AI yanitlari Turkce zorlamali",
+            hint: "AI yanitlari Turkce",
             tone: "accent",
           },
         ]}
@@ -54,11 +53,7 @@ export default async function SettingsPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <Card className="p-6">
-          <SectionTitle
-            eyebrow="Runtime"
-            title="Calisma ortami"
-            description="Aktif owner, proje ve credential bilgilerini tek bakista oku."
-          />
+          <SectionTitle eyebrow="Runtime" title="Calisma ortami" />
 
           <div className="mt-5 space-y-3">
             <SettingRow label="Owner UID" value={env.appOwnerId} />
@@ -75,11 +70,7 @@ export default async function SettingsPage() {
         </Card>
 
         <Card className="p-6">
-          <SectionTitle
-            eyebrow="Trading Defaults"
-            title="Tarama ve risk varsayimlari"
-            description="Sinyal motorunun hangi varsayimlarla calistigini daha okunur metriklerle gor."
-          />
+          <SectionTitle eyebrow="Trading Defaults" title="Tarama varsayimlari" />
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <MetricTile
@@ -90,12 +81,12 @@ export default async function SettingsPage() {
             <MetricTile
               label="Max Signal"
               value={settings.maxSignals.toString()}
-              hint="Dashboard'da listelenecek ust limit"
+              hint="Dashboard ust limiti"
             />
             <MetricTile
               label="Scan Interval"
               value={`${settings.scanIntervalMinutes} dk`}
-              hint="Lokal worker dongu araligi"
+              hint="Worker dongu araligi"
             />
             <MetricTile
               label="Aktif Indicator"
@@ -107,36 +98,11 @@ export default async function SettingsPage() {
         </Card>
 
         <Card className="p-6 xl:col-span-2">
-          <SectionTitle
-            eyebrow="Live Sync"
-            title="Manuel senkronizasyon"
-            description="Universe veya market scan akisini ihtiyac oldugunda elle tetikle."
-          />
+          <SectionTitle eyebrow="Whitelist" title="Manuel izleme listesi" />
 
-          <div className="mt-5 rounded-[28px] border border-white/8 bg-black/20 p-5">
-            <SyncActions />
+          <div className="mt-5">
+            <WhitelistManager symbols={settings.whitelistSymbols} />
           </div>
-        </Card>
-
-        <Card className="p-6 xl:col-span-2">
-          <SectionTitle
-            eyebrow="Whitelist"
-            title="Manuel izleme listesi"
-            description="Top 200 disindaki ama bilerek takip etmek istedigin semboller burada listelenir."
-          />
-
-          {settings.whitelistSymbols.length > 0 ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {settings.whitelistSymbols.map((symbol) => (
-                <MetricTile key={symbol} label="Whitelist" value={symbol} hint="Manuel eklenen sembol" />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-[24px] border border-white/8 bg-white/[0.03] px-4 py-4 text-sm leading-6 text-muted">
-              Whitelist listesi bos. Simdilik yalnizca market cap tabanli universe ile
-              tarama yapiyoruz.
-            </div>
-          )}
         </Card>
       </div>
     </div>

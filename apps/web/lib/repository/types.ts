@@ -43,4 +43,5 @@ export interface DataRepository {
   toggleIndicator(id: string): Promise<IndicatorDefinition>;
   reviewTrade(tradeId?: string): Promise<TradeReviewReport>;
   suggestIndicators(context?: string): Promise<IndicatorProposal[]>;
+  updateWhitelistSymbol(symbol: string, action: "add" | "remove"): Promise<UserSettings>;
 }

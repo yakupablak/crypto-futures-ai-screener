@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { SignalAIChat } from "@/components/ai/signal-ai-chat";
 import { LevelsChart } from "@/components/charts/levels-chart";
 import { SelectTradeButton } from "@/components/trades/select-trade-button";
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +30,7 @@ export default async function SignalDetailPage({
     <div className="page-section pb-10">
       <PageHeader
         eyebrow="Signal Detail"
-        title={`${signal.symbol} icin karar paneli`}
-        description="Entry, stop, hedefler, teknik teyitler ve trade secim notu ayni ekranda kalsin; karar verme hizi artarken akis bozulmasin."
+        title={`${signal.symbol} sinyali`}
         chips={[
           { label: signal.side, tone: signal.side === "LONG" ? "success" : "danger" },
           { label: formatSetupLabel(signal.setup), tone: "warning" },
@@ -47,11 +47,7 @@ export default async function SignalDetailPage({
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="space-y-6">
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Execution Map"
-              title="Seviye haritasi"
-              description="Entry, stop ve hedefler ayni grafik yuzeyinde hizli okunabilsin."
-            />
+            <SectionTitle eyebrow="Execution Map" title="Seviye haritasi" />
             <div className="mt-6 rounded-[28px] border border-white/8 bg-black/20 p-4">
               <LevelsChart
                 entry={signal.entry}
@@ -63,11 +59,7 @@ export default async function SignalDetailPage({
           </Card>
 
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Reasons"
-              title="Bu sinyal neden secildi?"
-              description="Teknik engine tarafindan uretilecek gerekceler net yuzeylerde gorelim."
-            />
+            <SectionTitle eyebrow="Reasons" title="Neden secildi?" />
 
             <div className="mt-5 space-y-3">
               {signal.reasons.length > 0 ? (
@@ -104,22 +96,21 @@ export default async function SignalDetailPage({
 
         <aside className="space-y-6">
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Trade Decision"
-              title="Bu islemi journale ekle"
-              description="Sinyali neden sectigini yazarsan sonraki AI review daha faydali hale gelir."
-            />
+            <SectionTitle eyebrow="Trade Decision" title="Bu islemi journale ekle" />
             <div className="mt-5 rounded-[28px] border border-white/8 bg-black/20 p-5">
               <SelectTradeButton signalId={signal.id} />
             </div>
           </Card>
 
           <Card className="p-6">
-            <SectionTitle
-              eyebrow="Technical Summary"
-              title="Teknik snapshot"
-              description="Trend, momentum ve volatilite bloklari tek yerde toparlansin."
-            />
+            <SectionTitle eyebrow="Signal AI" title="Sinyale soru sor" />
+            <div className="mt-5 rounded-[28px] border border-white/8 bg-black/20 p-5">
+              <SignalAIChat signalId={signal.id} symbol={signal.symbol} />
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <SectionTitle eyebrow="Technical Summary" title="Teknik snapshot" />
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <MetricTile
                 label="Trend"
