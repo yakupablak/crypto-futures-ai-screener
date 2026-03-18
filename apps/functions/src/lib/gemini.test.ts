@@ -53,11 +53,13 @@ describe("gemini adapters", () => {
     expect(proposals[0]).toMatchObject({
       ownerId: "local-owner",
       status: "PENDING",
+      summary: expect.stringContaining("genel bir hacim teyit filtresi"),
     });
     expect(proposals[0]?.proposal).toMatchObject({
       ownerId: "local-owner",
       status: "DRAFT",
       builtIn: false,
+      name: "Hacim Teyidi Sikilastirici",
     });
   });
 
@@ -180,5 +182,101 @@ describe("gemini adapters", () => {
     });
     expect(review.mistakes.length).toBeGreaterThan(0);
     expect(review.improvements.length).toBeGreaterThan(0);
+  });
+
+  it("adds Turkish-only instructions to trade review prompts", async () => {
+    const trade = createClosedTrade("trade-tr-prompt");
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    id: "review-1",
+                    ownerId: "local-owner",
+                    tradeId: trade.id,
+                    type: "TRADE_REVIEW",
+                    summary: "Islem ozeti Turkce yazildi.",
+                    mistakes: ["Stop planina sadik kalinmadi."],
+                    improvements: ["Giris sonrasi senaryo notu eklenmeli."],
+                    proposedIndicatorIds: [],
+                    confidence: 0.72,
+                    createdAt: "2026-03-17T12:00:00.000Z",
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+
+    await generateTradeReview(trade);
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const instruction = requestBody.contents?.[0]?.parts?.[0]?.text ?? "";
+
+    expect(instruction).toContain("JSON icindeki tum dogal dil alanlarini yalnizca Turkce yaz.");
+    expect(instruction).toContain("Ingilizce cumle veya aciklama yazma.");
+  });
+
+  it("adds Turkish-only instructions to indicator proposal prompts", async () => {
+    const trades = [createClosedTrade("trade-tr-indicator")];
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify([
+                    {
+                      rationale: "Turkce aciklama",
+                      summary: "Turkce ozet",
+                      basedOnTradeIds: ["trade-tr-indicator"],
+                      proposal: {
+                        name: "Turkce Filtre",
+                        description: "Turkce aciklama",
+                        dsl: {
+                          metadata: {
+                            id: "turkce-filtre",
+                            name: "Turkce Filtre",
+                            description: "Turkce aciklama",
+                            version: 1,
+                          },
+                          series: [],
+                          condition: {
+                            kind: "comparison",
+                            comparator: "GT",
+                            left: { source: "price", field: "volume", timeframe: "4H" },
+                            right: { source: "value", value: 1.2 },
+                          },
+                          scoreAdjustment: 3,
+                          reasonLabel: "Turkce neden",
+                        },
+                      },
+                    },
+                  ]),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+
+    await generateIndicatorProposals(trades, [], "Turkce oneriler istiyorum");
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const instruction = requestBody.contents?.[0]?.parts?.[0]?.text ?? "";
+
+    expect(instruction).toContain("JSON icindeki tum dogal dil alanlarini yalnizca Turkce yaz.");
+    expect(instruction).toContain("name alanlarinin degerleri Turkce olmali.");
   });
 });

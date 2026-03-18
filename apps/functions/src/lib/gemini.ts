@@ -13,6 +13,12 @@ import {
 import { config } from "./config";
 
 const logger = createLogger("gemini");
+const TURKISH_OUTPUT_INSTRUCTION = [
+  "JSON icindeki tum dogal dil alanlarini yalnizca Turkce yaz.",
+  "JSON anahtar isimlerini degistirme.",
+  "summary, mistakes, improvements, rationale, description, reasonLabel ve name alanlarinin degerleri Turkce olmali.",
+  "Ingilizce cumle veya aciklama yazma.",
+].join("\n");
 
 type JsonRecord = Record<string, unknown>;
 
@@ -197,6 +203,7 @@ export async function generateTradeReview(
   const prompt = `
 Sen ust duzey bir crypto futures trading kocusun.
 Kullanicinin trade kaydini analiz et ve yalnizca JSON dondur.
+${TURKISH_OUTPUT_INSTRUCTION}
 
 Trade:
 ${JSON.stringify(trade, null, 2)}
@@ -246,7 +253,7 @@ function buildIndicatorProposalFallback(
   const sampleIndicator: IndicatorDefinition = indicatorDefinitionSchema.parse({
     id: indicatorId,
     ownerId: config.ownerId,
-    name: "Volume Confirmation Tightener",
+    name: "Hacim Teyidi Sikilastirici",
     description:
       "Breakout islemlerinde volume ratio esigini artirarak zayif kirilimlari filtreler.",
     version: 1,
@@ -258,7 +265,7 @@ function buildIndicatorProposalFallback(
     dsl: {
       metadata: {
         id: indicatorId,
-        name: "Volume Confirmation Tightener",
+        name: "Hacim Teyidi Sikilastirici",
         description: "Hacim teyidi guclendirici filtre",
         version: 1,
       },
@@ -462,6 +469,7 @@ Sen deneyimli bir crypto futures trader ve guvenli sistem tasarimcisisin.
 Kullanicinin realize islemlerine gore yeni indicator/filter onerileri uret.
 Yalnizca JSON array dondur.
 Oneriler guvenli DSL kullanmali, keyfi kod uretmemeli.
+${TURKISH_OUTPUT_INSTRUCTION}
 
 Mevcut indicators:
 ${JSON.stringify(indicators, null, 2)}
