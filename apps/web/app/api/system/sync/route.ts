@@ -5,9 +5,24 @@ import { createRouteLogger } from "@/lib/api-logging";
 import { requireApiSession } from "@/lib/auth/server";
 import { runFullSync } from "../../../../../functions/src/jobs/run-full-sync";
 
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
 const schema = z.object({
   mode: z.enum(["FULL", "SCAN", "UNIVERSE"]).default("FULL"),
 });
+
+function getSyncErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Senkronizasyon tamamlanamadi.";
+  }
+
+  if (error.message.includes("451")) {
+    return "Binance Futures API mevcut sunucu bolgesinden erisimi engelliyor. Deploy ayari Avrupa bolgesine tasinarak duzeltildi; yeni surum aktif olduktan sonra tekrar dene.";
+  }
+
+  return "Senkronizasyon tamamlanamadi.";
+}
 
 export async function POST(request: Request) {
   const log = createRouteLogger("/api/system/sync", "POST");
@@ -58,6 +73,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: result });
   } catch (error) {
     log.error(error, body);
-    return NextResponse.json({ error: "Senkronizasyon tamamlanamadi." }, { status: 500 });
+    return NextResponse.json({ error: getSyncErrorMessage(error) }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { runFullSync } from "../../../../../functions/src/jobs/run-full-sync";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function unauthorized() {
   return NextResponse.json({ error: "Gecersiz cron anahtari." }, { status: 401 });

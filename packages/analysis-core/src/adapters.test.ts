@@ -167,4 +167,19 @@ describe("market adapter logging and sanitization", () => {
       },
     ]);
   });
+
+  it("surfaces a clear Binance region restriction message for 451 responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 451,
+        statusText: "Unavailable For Legal Reasons",
+      } satisfies Partial<Response>),
+    );
+
+    await expect(fetchKlines("BTCUSDT", "1d", 2)).rejects.toThrow(
+      "Binance Futures API bu sunucu bolgesinden erisimi yasal nedenlerle engelliyor",
+    );
+  });
 });

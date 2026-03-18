@@ -29,6 +29,16 @@ function isRetryableStatus(status: number) {
   return status === 408 || status === 429 || status >= 500;
 }
 
+function createRequestError(label: string, status: number) {
+  if (status === 451 && label.startsWith("Binance")) {
+    return new Error(
+      "Binance Futures API bu sunucu bolgesinden erisimi yasal nedenlerle engelliyor (HTTP 451).",
+    );
+  }
+
+  return new Error(`${label} failed: ${status}`);
+}
+
 function isRetryableError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;
@@ -163,7 +173,7 @@ async function fetchJson<T>(
           continue;
         }
 
-        const error = new Error(`${label} failed: ${response.status}`) as LoggedError;
+        const error = createRequestError(label, response.status) as LoggedError;
         error.alreadyLogged = true;
         logger.error("External request failed", {
           label,

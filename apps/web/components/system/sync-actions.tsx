@@ -51,7 +51,8 @@ export function SyncActions() {
       });
 
       if (!response.ok) {
-        setMessage("Senkronizasyon basarisiz oldu.");
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        setMessage(payload?.error ?? "Senkronizasyon basarisiz oldu.");
         return;
       }
 
